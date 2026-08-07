@@ -65,7 +65,10 @@ class MainActivity : ComponentActivity() {
                             val viewModel: TicketGridViewModel = viewModel(
                                 factory = TicketGridViewModel.Factory(repository, raffleId)
                             )
-                            TicketGridScreen(viewModel = viewModel)
+                            TicketGridScreen(
+                                viewModel = viewModel,
+                                onBack = { navController.popBackStack() }
+                            )
                         }
                     }
                 }

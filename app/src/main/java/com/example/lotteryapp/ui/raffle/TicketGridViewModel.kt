@@ -18,8 +18,6 @@ class TicketGridViewModel(
     private val raffleId: String
 ) : ViewModel() {
 
-
-
     val tickets: StateFlow<List<Ticket>> = repository.getTicketsForRaffle(raffleId)
         .stateIn(
             scope = viewModelScope,
@@ -48,6 +46,18 @@ class TicketGridViewModel(
         viewModelScope.launch {
             val updated = repository.sellOrReserveTicket(ticket, buyerName, buyerPhone, status)
             _lastTransaction.value = listOf(updated)
+        }
+    }
+
+    fun sellOrReserveGroup(
+        tickets: List<Ticket>,
+        buyerName: String,
+        buyerPhone: String?,
+        status: TicketStatus
+    ) {
+        viewModelScope.launch {
+            val updated = repository.sellOrReserveGroup(tickets, buyerName, buyerPhone, status)
+            _lastTransaction.value = updated
         }
     }
 

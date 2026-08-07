@@ -57,17 +57,18 @@ class RaffleRepository(
         buyerName: String,
         buyerPhone: String?,
         status: TicketStatus
-    ) {
+    ): List<Ticket> {
         val groupId = UUID.randomUUID().toString()
-        tickets.forEach { ticket ->
-            val updated = ticket.copy(
+        val updated = tickets.map { ticket ->
+            ticket.copy(
                 buyerName = buyerName,
                 buyerPhone = buyerPhone,
                 status = status,
                 groupId = groupId
             )
-            ticketDao.update(updated)
         }
+        updated.forEach { ticketDao.update(it) }
+        return updated
     }
 
     // --- Cancelación ---

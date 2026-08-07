@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.lotteryapp.data.entity.Raffle
+import androidx.compose.foundation.clickable
 
 @Composable
 fun HomeScreen(
@@ -65,6 +66,7 @@ private fun RaffleRow(raffle: Raffle, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable(onClick = onClick)
     ) {
         ListItem(
             headlineContent = { Text(raffle.name) },
