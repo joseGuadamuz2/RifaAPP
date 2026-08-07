@@ -8,9 +8,10 @@ import com.example.lotteryapp.repository.RaffleRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class HomeViewModel(
-    repository: RaffleRepository
+    private val repository: RaffleRepository
 ) : ViewModel() {
 
     val activeRaffles: StateFlow<List<Raffle>> = repository.getActiveRaffles()
@@ -19,6 +20,12 @@ class HomeViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    fun deleteRaffle(raffle: Raffle) {
+        viewModelScope.launch {
+            repository.deleteRaffle(raffle)
+        }
+    }
 
     class Factory(private val repository: RaffleRepository) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

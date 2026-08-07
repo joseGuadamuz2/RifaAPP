@@ -32,6 +32,9 @@ class RaffleRepository(
 
     suspend fun getRaffleById(raffleId: String): Raffle? = raffleDao.getById(raffleId)
 
+    suspend fun updateRaffle(raffle: Raffle) = raffleDao.update(raffle)
+
+    suspend fun deleteRaffle(raffle: Raffle) = raffleDao.delete(raffle)
     fun getTicketsForRaffle(raffleId: String): Flow<List<Ticket>> =
         ticketDao.getByRaffle(raffleId)
 

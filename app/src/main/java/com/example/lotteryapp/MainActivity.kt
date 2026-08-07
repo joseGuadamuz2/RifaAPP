@@ -17,6 +17,8 @@ import com.example.lotteryapp.ui.home.HomeScreen
 import com.example.lotteryapp.ui.home.HomeViewModel
 import com.example.lotteryapp.ui.raffle.CreateRaffleScreen
 import com.example.lotteryapp.ui.raffle.CreateRaffleViewModel
+import com.example.lotteryapp.ui.raffle.EditRaffleScreen
+import com.example.lotteryapp.ui.raffle.EditRaffleViewModel
 import com.example.lotteryapp.ui.raffle.TicketGridScreen
 import com.example.lotteryapp.ui.raffle.TicketGridViewModel
 import com.example.lotteryapp.ui.theme.LotteryAppTheme
@@ -39,7 +41,8 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 viewModel = viewModel,
                                 onCreateRaffle = { navController.navigate("createRaffle") },
-                                onOpenRaffle = { raffleId -> navController.navigate("ticketGrid/$raffleId") }
+                                onOpenRaffle = { raffleId -> navController.navigate("ticketGrid/$raffleId") },
+                                onEditRaffle = { raffleId -> navController.navigate("editRaffle/$raffleId") }
                             )
                         }
 
@@ -54,6 +57,20 @@ class MainActivity : ComponentActivity() {
                                         popUpTo("home")
                                     }
                                 }
+                            )
+                        }
+
+                        composable(
+                            route = "editRaffle/{raffleId}",
+                            arguments = listOf(navArgument("raffleId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val raffleId = backStackEntry.arguments?.getString("raffleId") ?: return@composable
+                            val viewModel: EditRaffleViewModel = viewModel(
+                                factory = EditRaffleViewModel.Factory(repository, raffleId)
+                            )
+                            EditRaffleScreen(
+                                viewModel = viewModel,
+                                onRaffleUpdated = { navController.popBackStack() }
                             )
                         }
 

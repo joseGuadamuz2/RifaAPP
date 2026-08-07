@@ -1,6 +1,7 @@
 package com.example.lotteryapp.data.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -16,6 +17,9 @@ interface RaffleDao {
 
     @Update
     suspend fun update(raffle: Raffle)
+
+    @Delete
+    suspend fun delete(raffle: Raffle)
 
     @Query("SELECT * FROM raffles WHERE id = :raffleId")
     suspend fun getById(raffleId: String): Raffle?
