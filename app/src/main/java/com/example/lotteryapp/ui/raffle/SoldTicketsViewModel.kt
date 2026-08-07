@@ -3,43 +3,97 @@ package com.example.lotteryapp.ui.raffle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.lotteryapp.data.dao.TicketDao
+import com.example.lotteryapp.data.entity.Raffle
 import com.example.lotteryapp.data.entity.Ticket
+import com.example.lotteryapp.data.entity.TicketStatus
+import com.example.lotteryapp.repository.RaffleRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+data class SaleEntry(
+    val tickets: List<Ticket>,
+    val groupId: String?
+) {
+    val numbers: List<String> get() = tickets.map { it.number }.sorted()
+    val buyerName: String? get() = tickets.firstOrNull()?.buyerName
+    val buyerPhone: String? get() = tickets.firstOrNull()?.buyerPhone
+    val status: TicketStatus get() = tickets.firstOrNull()?.status ?: TicketStatus.AVAILABLE
+}
 
 class SoldTicketsViewModel(
-    private val ticketDao: TicketDao,
+    private val repository: RaffleRepository,
     private val raffleId: String
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    val results: StateFlow<List<Ticket>> = _searchQuery
-        .flatMapLatest { query ->
-            ticketDao.searchSoldOrReserved(raffleId, query)
+    private val _raffle = MutableStateFlow<Raffle?>(null)
+    val raffle: StateFlow<Raffle?> = _raffle
+
+    init {
+        viewModelScope.launch {
+            _raffle.value = repository.getRaffleById(raffleId)
         }
+    }
+
+    val entries: StateFlow<List<SaleEntry>> = _searchQuery
+        .flatMapLatest { query -> repository.searchSoldOrReserved(raffleId, query) }
+        .map { matched -> buildEntries(matched) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
+    private suspend fun buildEntries(matched: List<Ticket>): List<SaleEntry> {
+        val individualEntries = mutableListOf<SaleEntry>()
+        val groupEntries = mutableListOf<SaleEntry>()
+        val seenGroupIds = mutableSetOf<String>()
+
+        for (ticket in matched) {
+            val groupId = ticket.groupId
+            if (groupId == null) {
+                individualEntries.add(SaleEntry(tickets = listOf(ticket), groupId = null))
+            } else if (groupId !in seenGroupIds) {
+                seenGroupIds.add(groupId)
+                val fullGroup = repository.getTicketsByGroup(groupId)
+                groupEntries.add(SaleEntry(tickets = fullGroup, groupId = groupId))
+            }
+        }
+
+        return (individualEntries + groupEntries).sortedBy { it.numbers.firstOrNull() }
+    }
+
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
     }
 
+    fun toggleStatus(entry: SaleEntry) {
+        val newStatus = if (entry.status == TicketStatus.SOLD) TicketStatus.RESERVED else TicketStatus.SOLD
+        viewModelScope.launch {
+            repository.changeTicketsStatus(entry.tickets, newStatus)
+        }
+    }
+
+    fun cancelEntry(entry: SaleEntry) {
+        viewModelScope.launch {
+            repository.cancelTickets(entry.tickets)
+        }
+    }
+
     class Factory(
-        private val ticketDao: TicketDao,
+        private val repository: RaffleRepository,
         private val raffleId: String
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return SoldTicketsViewModel(ticketDao, raffleId) as T
+            return SoldTicketsViewModel(repository, raffleId) as T
         }
     }
 }

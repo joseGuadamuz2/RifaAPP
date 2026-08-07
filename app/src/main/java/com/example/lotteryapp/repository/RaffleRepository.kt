@@ -55,6 +55,13 @@ class RaffleRepository(
         return updated
     }
 
+    suspend fun changeTicketStatus(ticket: Ticket, newStatus: TicketStatus): Ticket {
+        val updated = ticket.copy(status = newStatus)
+        ticketDao.update(updated)
+        return updated
+    }
+
+
     suspend fun sellOrReserveGroup(
         tickets: List<Ticket>,
         buyerName: String,
@@ -93,6 +100,24 @@ class RaffleRepository(
             imageSent = false
         )
         ticketDao.update(reset)
+    }
+
+    // --- Registro de ventas ---
+
+    fun searchSoldOrReserved(raffleId: String, query: String): Flow<List<Ticket>> =
+        ticketDao.searchSoldOrReserved(raffleId, query)
+
+    suspend fun getTicketsByGroup(groupId: String): List<Ticket> =
+        ticketDao.getByGroupId(groupId)
+
+    suspend fun changeTicketsStatus(tickets: List<Ticket>, newStatus: TicketStatus): List<Ticket> {
+        val updated = tickets.map { it.copy(status = newStatus) }
+        updated.forEach { ticketDao.update(it) }
+        return updated
+    }
+
+    suspend fun cancelTickets(tickets: List<Ticket>) {
+        tickets.forEach { cancelTicket(it) }
     }
 
     // --- Ganador ---

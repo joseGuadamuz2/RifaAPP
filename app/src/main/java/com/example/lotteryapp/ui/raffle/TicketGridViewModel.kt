@@ -71,6 +71,13 @@ class TicketGridViewModel(
         }
     }
 
+    fun changeStatus(ticket: Ticket, newStatus: TicketStatus) {
+        viewModelScope.launch {
+            repository.changeTicketStatus(ticket, newStatus)
+        }
+    }
+
+
     class Factory(
         private val repository: RaffleRepository,
         private val raffleId: String

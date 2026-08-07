@@ -19,6 +19,8 @@ import com.example.lotteryapp.ui.raffle.CreateRaffleScreen
 import com.example.lotteryapp.ui.raffle.CreateRaffleViewModel
 import com.example.lotteryapp.ui.raffle.EditRaffleScreen
 import com.example.lotteryapp.ui.raffle.EditRaffleViewModel
+import com.example.lotteryapp.ui.raffle.SoldTicketsScreen
+import com.example.lotteryapp.ui.raffle.SoldTicketsViewModel
 import com.example.lotteryapp.ui.raffle.TicketGridScreen
 import com.example.lotteryapp.ui.raffle.TicketGridViewModel
 import com.example.lotteryapp.ui.theme.LotteryAppTheme
@@ -83,6 +85,21 @@ class MainActivity : ComponentActivity() {
                                 factory = TicketGridViewModel.Factory(repository, raffleId)
                             )
                             TicketGridScreen(
+                                viewModel = viewModel,
+                                onBack = { navController.popBackStack() },
+                                onOpenSoldTickets = { navController.navigate("soldTickets/$raffleId") }
+                            )
+                        }
+
+                        composable(
+                            route = "soldTickets/{raffleId}",
+                            arguments = listOf(navArgument("raffleId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val raffleId = backStackEntry.arguments?.getString("raffleId") ?: return@composable
+                            val viewModel: SoldTicketsViewModel = viewModel(
+                                factory = SoldTicketsViewModel.Factory(repository, raffleId)
+                            )
+                            SoldTicketsScreen(
                                 viewModel = viewModel,
                                 onBack = { navController.popBackStack() }
                             )

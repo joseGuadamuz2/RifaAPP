@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.filled.List
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -60,7 +60,8 @@ private val ColorSelectedBorder = Color(0xFF1976D2)
 @Composable
 fun TicketGridScreen(
     viewModel: TicketGridViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenSoldTickets: () -> Unit
 ) {
     val tickets by viewModel.tickets.collectAsState()
     val raffle by viewModel.raffle.collectAsState()
@@ -86,18 +87,18 @@ fun TicketGridScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(
-                            text = raffle?.name ?: "",
-                            fontWeight = FontWeight.Bold
-                        )
-                        raffle?.prizeName?.let {
-                            Text(text = it, fontSize = 13.sp)
-                        }
+                        Text(text = raffle?.name ?: "", fontWeight = FontWeight.Bold)
+                        raffle?.prizeName?.let { Text(text = it, fontSize = 13.sp) }
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenSoldTickets) {
+                        Icon(Icons.Filled.List, contentDescription = "Registro de ventas")
                     }
                 }
             )
@@ -176,6 +177,10 @@ fun TicketGridScreen(
             onDismiss = { ticketToView = null },
             onCancel = {
                 viewModel.cancel(ticket)
+                ticketToView = null
+            },
+            onChangeStatus = { newStatus ->
+                viewModel.changeStatus(ticket, newStatus)
                 ticketToView = null
             }
         )
@@ -439,9 +444,12 @@ private fun GroupSellDialog(
 private fun TicketDetailDialog(
     ticket: Ticket,
     onDismiss: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onChangeStatus: (TicketStatus) -> Unit
 ) {
     val statusText = if (ticket.status == TicketStatus.SOLD) "Vendido" else "Apartado"
+    val nextStatus = if (ticket.status == TicketStatus.SOLD) TicketStatus.RESERVED else TicketStatus.SOLD
+    val nextStatusLabel = if (ticket.status == TicketStatus.SOLD) "Marcar como apartado" else "Marcar como vendido"
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -456,8 +464,13 @@ private fun TicketDetailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onCancel) {
-                Text("Cancelar boleto")
+            Column(horizontalAlignment = Alignment.End) {
+                TextButton(onClick = { onChangeStatus(nextStatus) }) {
+                    Text(nextStatusLabel)
+                }
+                TextButton(onClick = onCancel) {
+                    Text("Cancelar boleto")
+                }
             }
         },
         dismissButton = {
