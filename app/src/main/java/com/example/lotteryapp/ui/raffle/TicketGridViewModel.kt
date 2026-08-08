@@ -87,4 +87,11 @@ class TicketGridViewModel(
             return TicketGridViewModel(repository, raffleId) as T
         }
     }
+
+    fun editPhone(ticket: Ticket, newPhone: String?) {
+        viewModelScope.launch {
+            repository.updateBuyerPhone(listOf(ticket), newPhone)
+        }
+    }
+
 }

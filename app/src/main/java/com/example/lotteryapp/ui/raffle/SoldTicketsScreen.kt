@@ -2,6 +2,7 @@ package com.example.lotteryapp.ui.raffle
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -27,10 +30,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.util.WhatsAppSender
 
@@ -44,6 +50,8 @@ fun SoldTicketsScreen(
     val entries by viewModel.entries.collectAsState()
     val raffle by viewModel.raffle.collectAsState()
     var entryToCancel by remember { mutableStateOf<SaleEntry?>(null) }
+    var entryToEditPhone by remember { mutableStateOf<SaleEntry?>(null) }
+    var statusFilter by remember { mutableStateOf<TicketStatus?>(null) }
     val context = LocalContext.current
 
     Scaffold(
@@ -71,14 +79,41 @@ fun SoldTicketsScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            if (entries.isEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = statusFilter == null,
+                    onClick = { statusFilter = null },
+                    label = { Text("Todos") }
+                )
+                FilterChip(
+                    selected = statusFilter == TicketStatus.SOLD,
+                    onClick = { statusFilter = TicketStatus.SOLD },
+                    label = { Text("Vendidos") }
+                )
+                FilterChip(
+                    selected = statusFilter == TicketStatus.RESERVED,
+                    onClick = { statusFilter = TicketStatus.RESERVED },
+                    label = { Text("Apartados") }
+                )
+            }
+
+            val filteredEntries = statusFilter?.let { filter ->
+                entries.filter { it.status == filter }
+            } ?: entries
+
+            if (filteredEntries.isEmpty()) {
                 Text(
                     text = "No hay ventas registradas todavía.",
                     modifier = Modifier.padding(top = 24.dp)
                 )
             } else {
                 LazyColumn {
-                    items(entries, key = { it.groupId ?: it.tickets.first().id }) { entry ->
+                    items(filteredEntries, key = { it.groupId ?: it.tickets.first().id }) { entry ->
                         val currentRaffle = raffle
                         SaleEntryCard(
                             entry = entry,
@@ -88,7 +123,8 @@ fun SoldTicketsScreen(
                                     WhatsAppSender.sendTextReceipt(context, currentRaffle, entry.tickets)
                                 }
                             },
-                            onCancel = { entryToCancel = entry }
+                            onCancel = { entryToCancel = entry },
+                            onEditPhone = { entryToEditPhone = entry }
                         )
                     }
                 }
@@ -119,6 +155,17 @@ fun SoldTicketsScreen(
             }
         )
     }
+
+    entryToEditPhone?.let { entry ->
+        EditPhoneDialog(
+            currentPhone = entry.buyerPhone,
+            onDismiss = { entryToEditPhone = null },
+            onConfirm = { newPhone ->
+                viewModel.editPhone(entry, newPhone)
+                entryToEditPhone = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -126,10 +173,11 @@ private fun SaleEntryCard(
     entry: SaleEntry,
     onToggleStatus: () -> Unit,
     onResend: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onEditPhone: () -> Unit
 ) {
     val statusLabel = if (entry.status == TicketStatus.SOLD) "Vendido" else "Apartado"
-    val toggleLabel = if (entry.status == TicketStatus.SOLD) "Marcar apartado" else "Marcar vendido"
+    val toggleLabel = if (entry.status == TicketStatus.SOLD) "Apartar" else "Vender"
     val hasPhone = !entry.buyerPhone.isNullOrBlank()
 
     Card(
@@ -138,19 +186,21 @@ private fun SaleEntryCard(
             .padding(vertical = 6.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Boletos: ${entry.numbers.joinToString(", ")}",
-                fontWeight = FontWeight.Bold
-            )
-            Text(text = entry.buyerName ?: "")
-            if (hasPhone) {
-                Text(text = entry.buyerPhone ?: "")
-            }
-
             Row(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
+                Column {
+                    Text(
+                        text = "Boletos: ${entry.numbers.joinToString(", ")}",
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(text = entry.buyerName ?: "")
+                    if (hasPhone) {
+                        Text(text = entry.buyerPhone ?: "")
+                    }
+                }
                 AssistChip(onClick = {}, label = { Text(statusLabel) })
             }
 
@@ -158,20 +208,76 @@ private fun SaleEntryCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                TextButton(onClick = onCancel) {
-                    Text("Cancelar")
-                }
-                TextButton(onClick = onToggleStatus) {
-                    Text(toggleLabel)
-                }
+                val buttonPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                val fontSize = 11.sp
+
                 if (hasPhone) {
-                    TextButton(onClick = onResend) {
-                        Text("Reenviar")
+                    FilledTonalButton(
+                        onClick = onResend,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = buttonPadding
+                    ) {
+                        Text("Reenviar", fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                }
+
+                FilledTonalButton(
+                    onClick = onToggleStatus,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = buttonPadding
+                ) {
+                    Text(toggleLabel, fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+
+                FilledTonalButton(
+                    onClick = onEditPhone,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = buttonPadding
+                ) {
+                    Text("Editar", fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+
+                FilledTonalButton(
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = buttonPadding
+                ) {
+                    Text("Borrar", fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun EditPhoneDialog(
+    currentPhone: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (String?) -> Unit
+) {
+    var phone by remember { mutableStateOf(currentPhone ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar teléfono") },
+        text = {
+            OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it },
+                label = { Text("Teléfono (opcional)") }
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(phone.ifBlank { null }) }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }

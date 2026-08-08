@@ -61,6 +61,12 @@ class RaffleRepository(
         return updated
     }
 
+    suspend fun updateBuyerPhone(tickets: List<Ticket>, newPhone: String?): List<Ticket> {
+        val updated = tickets.map { it.copy(buyerPhone = newPhone) }
+        updated.forEach { ticketDao.update(it) }
+        return updated
+    }
+
 
     suspend fun sellOrReserveGroup(
         tickets: List<Ticket>,

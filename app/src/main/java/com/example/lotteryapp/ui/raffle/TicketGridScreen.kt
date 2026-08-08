@@ -7,9 +7,9 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.material.icons.filled.List
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,8 +20,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,12 +47,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
+import com.example.lotteryapp.util.ImageSharingHelper
 import com.example.lotteryapp.util.WhatsAppSender
-import androidx.compose.material3.ExperimentalMaterial3Api
 
 private val ColorAvailable = Color(0xFFECEFF1)
 private val ColorReserved = Color(0xFFFFD54F)
@@ -68,6 +72,7 @@ fun TicketGridScreen(
     val lastTransaction by viewModel.lastTransaction.collectAsState()
     var ticketToSell by remember { mutableStateOf<Ticket?>(null) }
     var ticketToView by remember { mutableStateOf<Ticket?>(null) }
+    var ticketToEditPhone by remember { mutableStateOf<Ticket?>(null) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
     var showGroupSellDialog by remember { mutableStateOf(false) }
@@ -97,8 +102,15 @@ fun TicketGridScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onOpenSoldTickets) {
-                        Icon(Icons.Filled.List, contentDescription = "Registro de ventas")
+                    IconButton(onClick = {
+                        raffle?.let { currentRaffle ->
+                            ImageSharingHelper.shareAvailableNumbers(context, currentRaffle, tickets)
+                        }
+                    }) {
+                        Icon(Icons.Filled.Share, contentDescription = "Compartir estado")
+                    }
+                    TextButton(onClick = onOpenSoldTickets) {
+                        Text("Ventas")
                     }
                 }
             )
@@ -172,6 +184,7 @@ fun TicketGridScreen(
     }
 
     ticketToView?.let { ticket ->
+        val currentRaffle = raffle
         TicketDetailDialog(
             ticket = ticket,
             onDismiss = { ticketToView = null },
@@ -182,6 +195,26 @@ fun TicketGridScreen(
             onChangeStatus = { newStatus ->
                 viewModel.changeStatus(ticket, newStatus)
                 ticketToView = null
+            },
+            onEditPhone = {
+                ticketToView = null
+                ticketToEditPhone = ticket
+            },
+            onResend = {
+                if (currentRaffle != null) {
+                    WhatsAppSender.sendTextReceipt(context, currentRaffle, listOf(ticket))
+                }
+            }
+        )
+    }
+
+    ticketToEditPhone?.let { ticket ->
+        EditPhoneDialog(
+            currentPhone = ticket.buyerPhone,
+            onDismiss = { ticketToEditPhone = null },
+            onConfirm = { newPhone ->
+                viewModel.editPhone(ticket, newPhone)
+                ticketToEditPhone = null
             }
         )
     }
@@ -445,11 +478,14 @@ private fun TicketDetailDialog(
     ticket: Ticket,
     onDismiss: () -> Unit,
     onCancel: () -> Unit,
-    onChangeStatus: (TicketStatus) -> Unit
+    onChangeStatus: (TicketStatus) -> Unit,
+    onEditPhone: () -> Unit,
+    onResend: () -> Unit
 ) {
     val statusText = if (ticket.status == TicketStatus.SOLD) "Vendido" else "Apartado"
     val nextStatus = if (ticket.status == TicketStatus.SOLD) TicketStatus.RESERVED else TicketStatus.SOLD
-    val nextStatusLabel = if (ticket.status == TicketStatus.SOLD) "Marcar como apartado" else "Marcar como vendido"
+    val toggleLabel = if (ticket.status == TicketStatus.SOLD) "Apartar" else "Vender"
+    val hasPhone = !ticket.buyerPhone.isNullOrBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -464,18 +500,82 @@ private fun TicketDetailDialog(
             }
         },
         confirmButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                TextButton(onClick = { onChangeStatus(nextStatus) }) {
-                    Text(nextStatusLabel)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                val buttonPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                val fontSize = 11.sp
+
+                if (hasPhone) {
+                    FilledTonalButton(
+                        onClick = onResend,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = buttonPadding
+                    ) {
+                        Text("Reenviar", fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
-                TextButton(onClick = onCancel) {
-                    Text("Cancelar boleto")
+
+                FilledTonalButton(
+                    onClick = { onChangeStatus(nextStatus) },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = buttonPadding
+                ) {
+                    Text(toggleLabel, fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+
+                FilledTonalButton(
+                    onClick = onEditPhone,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = buttonPadding
+                ) {
+                    Text("Editar", fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+
+                FilledTonalButton(
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = buttonPadding
+                ) {
+                    Text("Borrar", fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cerrar")
+            }
+        }
+    )
+}
+
+@Composable
+private fun EditPhoneDialog(
+    currentPhone: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (String?) -> Unit
+) {
+    var phone by remember { mutableStateOf(currentPhone ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar teléfono") },
+        text = {
+            OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it },
+                label = { Text("Teléfono (opcional)") }
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(phone.ifBlank { null }) }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
             }
         }
     )

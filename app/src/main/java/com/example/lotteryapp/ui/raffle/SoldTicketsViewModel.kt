@@ -96,4 +96,10 @@ class SoldTicketsViewModel(
             return SoldTicketsViewModel(repository, raffleId) as T
         }
     }
+
+    fun editPhone(entry: SaleEntry, newPhone: String?) {
+        viewModelScope.launch {
+            repository.updateBuyerPhone(entry.tickets, newPhone)
+        }
+    }
 }
