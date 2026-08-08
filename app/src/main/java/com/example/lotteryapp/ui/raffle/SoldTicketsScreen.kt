@@ -51,6 +51,7 @@ fun SoldTicketsScreen(
     val raffle by viewModel.raffle.collectAsState()
     var entryToCancel by remember { mutableStateOf<SaleEntry?>(null) }
     var entryToEditPhone by remember { mutableStateOf<SaleEntry?>(null) }
+    var entryToToggleStatus by remember { mutableStateOf<SaleEntry?>(null) }
     var statusFilter by remember { mutableStateOf<TicketStatus?>(null) }
     val context = LocalContext.current
 
@@ -117,7 +118,7 @@ fun SoldTicketsScreen(
                         val currentRaffle = raffle
                         SaleEntryCard(
                             entry = entry,
-                            onToggleStatus = { viewModel.toggleStatus(entry) },
+                            onToggleStatus = { entryToToggleStatus = entry },
                             onResend = {
                                 if (currentRaffle != null) {
                                     WhatsAppSender.sendTextReceipt(context, currentRaffle, entry.tickets)
@@ -130,6 +131,33 @@ fun SoldTicketsScreen(
                 }
             }
         }
+    }
+
+    entryToToggleStatus?.let { entry ->
+        val isSold = entry.status == TicketStatus.SOLD
+        val newStatusLabel = if (isSold) "Apartado" else "Vendido"
+        val actionLabel = if (isSold) "Marcar como apartado" else "Confirmar venta"
+
+        AlertDialog(
+            onDismissRequest = { entryToToggleStatus = null },
+            title = { Text("Cambiar estado") },
+            text = {
+                Text("¿Deseas cambiar el estado de los boletos ${entry.numbers.joinToString(", ")} a $newStatusLabel?")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.toggleStatus(entry)
+                    entryToToggleStatus = null
+                }) {
+                    Text(actionLabel)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { entryToToggleStatus = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     entryToCancel?.let { entry ->
