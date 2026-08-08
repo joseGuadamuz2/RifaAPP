@@ -65,15 +65,15 @@ fun TicketGridScreen(
     val raffle by viewModel.raffle.collectAsState()
     val lastTransaction by viewModel.lastTransaction.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    
+
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
     var selectedTicketForDetails by remember { mutableStateOf<Ticket?>(null) }
     var showGroupSellDialog by remember { mutableStateOf(false) }
     var showQuickSellDialog by remember { mutableStateOf(false) }
-    
+
     val context = LocalContext.current
     val isRaffleActive = raffle?.status == RaffleStatus.ACTIVE
 
@@ -113,17 +113,18 @@ fun TicketGridScreen(
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            raffle?.let { 
+            raffle?.let {
                 RaffleHeaderSaaS(
                     raffle = it,
                     onEditClick = { onEditRaffle(it.id) },
                     onOpenSoldTickets = onOpenSoldTickets
                 )
             }
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             LegendRow()
             LazyVerticalGrid(
                 columns = GridCells.Fixed(10),
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 8.dp)
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 10.dp, vertical = 8.dp)
             ) {
                 items(tickets, key = { it.id }) { ticket ->
                     val isSelected = selectedIds.contains(ticket.id)
@@ -140,7 +141,7 @@ fun TicketGridScreen(
                     )
                 }
             }
-            
+
             // Panel de Acción Integrado al fondo (Diseño compacto sin barra de progreso)
             BottomActionPanel(
                 sold = tickets.count { it.status == TicketStatus.SOLD },
@@ -150,8 +151,8 @@ fun TicketGridScreen(
                 isRaffleActive = isRaffleActive,
                 selectedCount = selectedIds.size,
                 onButtonClick = {
-                    if (selectedIds.isEmpty()) showQuickSellDialog = true 
-                    else showGroupSellDialog = true 
+                    if (selectedIds.isEmpty()) showQuickSellDialog = true
+                    else showGroupSellDialog = true
                 }
             )
         }
@@ -225,17 +226,17 @@ fun TicketGridScreen(
 
 @Composable
 private fun BottomActionPanel(
-    sold: Int, 
-    reserved: Int, 
-    available: Int, 
+    sold: Int,
+    reserved: Int,
+    available: Int,
     total: Int,
     isRaffleActive: Boolean,
     selectedCount: Int,
     onButtonClick: () -> Unit
 ) {
     Surface(
-        tonalElevation = 6.dp, 
-        shadowElevation = 8.dp, 
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     ) {
@@ -250,7 +251,7 @@ private fun BottomActionPanel(
                 SummaryStatSmall(label = "Apartados", value = reserved.toString(), color = ColorReserved)
                 SummaryStatSmall(label = "Libres", value = available.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            
+
             if (isRaffleActive) {
                 Spacer(Modifier.width(12.dp))
                 Button(
@@ -262,8 +263,8 @@ private fun BottomActionPanel(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Icon(
-                        if (selectedCount == 0) Icons.Default.Bolt else Icons.Default.CheckCircle, 
-                        null, 
+                        if (selectedCount == 0) Icons.Default.Bolt else Icons.Default.CheckCircle,
+                        null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(6.dp))
@@ -288,7 +289,7 @@ private fun QuickSellDialog(
     var buyerName by remember { mutableStateOf("") }
     var buyerPhone by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf<TicketStatus?>(null) }
-    
+
     val (availableTickets, unavailableMsg) = remember(input, allTickets) {
         val typed = input.split(Regex("[\\s,.]+")).map { it.trim().padStart(2, '0') }.filter { it.isNotEmpty() && it.all { c -> c.isDigit() } }.distinct()
         val available = allTickets.filter { it.number in typed && it.status == TicketStatus.AVAILABLE }
@@ -309,9 +310,9 @@ private fun QuickSellDialog(
                     Text("Ingrese los números:", style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(value = input, onValueChange = { input = it }, label = { Text("Números (ej: 05, 12, 88)") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
                     unavailableMsg?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall) }
-                    
+
                     Spacer(Modifier.height(8.dp))
-                    
+
                     Button(
                         onClick = { selectedStatus = TicketStatus.SOLD },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -323,7 +324,7 @@ private fun QuickSellDialog(
                         Spacer(Modifier.width(8.dp))
                         Text("VENDER (Pagado)")
                     }
-                    
+
                     FilledTonalButton(
                         onClick = { selectedStatus = TicketStatus.RESERVED },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -339,13 +340,13 @@ private fun QuickSellDialog(
                     Text("Procesando como: ${if(selectedStatus == TicketStatus.SOLD) "VENTA" else "APARTADO"}", fontWeight = FontWeight.Bold, color = if(selectedStatus == TicketStatus.SOLD) ColorSold else Color(0xFF7B5E00))
                     OutlinedTextField(value = buyerName, onValueChange = { buyerName = it }, label = { Text("Nombre del cliente") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
                     OutlinedTextField(
-                        value = buyerPhone, 
-                        onValueChange = { if (it.length <= 8) buyerPhone = it.filter { c -> c.isDigit() } }, 
-                        label = { Text("WhatsApp (8 dígitos)") }, 
+                        value = buyerPhone,
+                        onValueChange = { if (it.length <= 8) buyerPhone = it.filter { c -> c.isDigit() } },
+                        label = { Text("WhatsApp (8 dígitos)") },
                         isError = !isPhoneValid,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), 
-                        modifier = Modifier.fillMaxWidth(), 
-                        shape = RoundedCornerShape(12.dp), 
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
                         singleLine = true
                     )
                 }
@@ -378,7 +379,7 @@ private fun GroupSellDialog(
     var buyerName by remember { mutableStateOf("") }
     var buyerPhone by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf<TicketStatus?>(null) }
-    
+
     val isPhoneValid = buyerPhone.isEmpty() || buyerPhone.length == 8
     val isFormValid = buyerName.isNotBlank() && isPhoneValid
 
@@ -389,7 +390,7 @@ private fun GroupSellDialog(
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (selectedStatus == null) {
                     Text("Números: ${tickets.joinToString(", ") { it.number }}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 18.sp)
-                    
+
                     Button(
                         onClick = { selectedStatus = TicketStatus.SOLD },
                         modifier = Modifier.fillMaxWidth().height(60.dp),
@@ -400,7 +401,7 @@ private fun GroupSellDialog(
                         Spacer(Modifier.width(12.dp))
                         Text("VENDER (Ya pagado)", fontWeight = FontWeight.Bold)
                     }
-                    
+
                     FilledTonalButton(
                         onClick = { selectedStatus = TicketStatus.RESERVED },
                         modifier = Modifier.fillMaxWidth().height(60.dp),
@@ -413,16 +414,16 @@ private fun GroupSellDialog(
                     }
                 } else {
                     Text("Modo: ${if(selectedStatus == TicketStatus.SOLD) "VENTA" else "APARTADO"}", fontWeight = FontWeight.Bold, color = if(selectedStatus == TicketStatus.SOLD) ColorSold else Color(0xFF7B5E00))
-                    
+
                     OutlinedTextField(value = buyerName, onValueChange = { buyerName = it }, label = { Text("Nombre del cliente") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
                     OutlinedTextField(
-                        value = buyerPhone, 
-                        onValueChange = { if (it.length <= 8) buyerPhone = it.filter { c -> c.isDigit() } }, 
-                        label = { Text("WhatsApp (8 dígitos)") }, 
+                        value = buyerPhone,
+                        onValueChange = { if (it.length <= 8) buyerPhone = it.filter { c -> c.isDigit() } },
+                        label = { Text("WhatsApp (8 dígitos)") },
                         isError = !isPhoneValid,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), 
-                        modifier = Modifier.fillMaxWidth(), 
-                        shape = RoundedCornerShape(12.dp), 
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
                         singleLine = true
                     )
                 }
@@ -459,12 +460,12 @@ private fun RaffleHeaderSaaS(raffle: Raffle, onEditClick: () -> Unit, onOpenSold
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().padding(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.size(70.dp).clip(RoundedCornerShape(14.dp)).clickable { onEditClick() }) {
                     if (raffle.prizePhotoPath != null) {
@@ -484,21 +485,21 @@ private fun RaffleHeaderSaaS(raffle: Raffle, onEditClick: () -> Unit, onOpenSold
                     Text(if(raffle.status == RaffleStatus.ACTIVE) "ACTIVA" else "CERRADA", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold else Color.Gray, fontWeight = FontWeight.Bold)
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 RaffleDetailItemCompact(Icons.Default.Payments, "Precio", "₡${raffle.ticketPrice.toInt()}")
                 RaffleDetailItemCompact(Icons.Default.Event, "Sorteo", dateStr)
                 RaffleDetailItemCompact(Icons.Default.ConfirmationNumber, "Tipo", sourceStr)
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             OutlinedButton(
-                onClick = onOpenSoldTickets, 
+                onClick = onOpenSoldTickets,
                 modifier = Modifier.fillMaxWidth().height(36.dp),
                 shape = RoundedCornerShape(10.dp),
                 contentPadding = PaddingValues(0.dp),
@@ -515,11 +516,11 @@ private fun RaffleHeaderSaaS(raffle: Raffle, onEditClick: () -> Unit, onOpenSold
 @Composable
 private fun RaffleDetailItemCompact(icon: ImageVector, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(4.dp))
+        Icon(icon, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(6.dp))
         Column {
-            Text(label, fontSize = 8.sp, color = Color.Gray)
-            Text(value, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+            Text(label, fontSize = 11.sp, color = Color.Gray)
+            Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
         }
     }
 }
