@@ -1,6 +1,7 @@
 package com.example.lotteryapp.ui.raffle
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -35,12 +37,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.lotteryapp.data.entity.Raffle
+import com.example.lotteryapp.data.entity.RaffleSource
 import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.util.ImageSharingHelper
 import com.example.lotteryapp.util.WhatsAppSender
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val ColorAvailable = Color(0xFFF5F5F5)
 private val ColorReserved = Color(0xFFFFD54F)
@@ -135,6 +141,7 @@ fun TicketGridScreen(
                 }
             }
             
+            // Panel de Acción Integrado al fondo (Diseño compacto sin barra de progreso)
             BottomActionPanel(
                 sold = tickets.count { it.status == TicketStatus.SOLD },
                 reserved = tickets.count { it.status == TicketStatus.RESERVED },
@@ -164,7 +171,6 @@ fun TicketGridScreen(
     }
 
     if (showQuickSellDialog) {
-        val availableTickets = tickets.filter { it.status == TicketStatus.AVAILABLE }
         QuickSellDialog(
             allTickets = tickets,
             onDismiss = { showQuickSellDialog = false },
@@ -228,53 +234,44 @@ private fun BottomActionPanel(
     onButtonClick: () -> Unit
 ) {
     Surface(
-        tonalElevation = 8.dp, 
-        shadowElevation = 12.dp, 
+        tonalElevation = 6.dp, 
+        shadowElevation = 8.dp, 
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            val progress = if (total > 0) sold.toFloat() / total.toFloat() else 0f
-            LinearProgressIndicator(
-                progress = { progress }, 
-                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), 
-                color = ColorSold, 
-                trackColor = ColorAvailable
-            )
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(), 
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceAround) {
-                    SummaryStatSmall(label = "Pagados", value = sold.toString(), color = ColorSold)
-                    SummaryStatSmall(label = "Apartados", value = reserved.toString(), color = ColorReserved)
-                    SummaryStatSmall(label = "Libres", value = available.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                
-                if (isRaffleActive) {
-                    Spacer(Modifier.width(16.dp))
-                    Button(
-                        onClick = onButtonClick,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (selectedCount == 0) MaterialTheme.colorScheme.primary else ColorSelectedBorder
-                        ),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
-                    ) {
-                        Icon(
-                            if (selectedCount == 0) Icons.Default.Bolt else Icons.Default.CheckCircle, 
-                            null, 
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (selectedCount == 0) "VENTA RÁPIDA" else "CONFIRMAR ($selectedCount)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Estadísticas en una sola línea (Sin barra de progreso para ahorrar altura)
+            Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceAround) {
+                SummaryStatSmall(label = "Pagados", value = sold.toString(), color = ColorSold)
+                SummaryStatSmall(label = "Apartados", value = reserved.toString(), color = ColorReserved)
+                SummaryStatSmall(label = "Libres", value = available.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            
+            if (isRaffleActive) {
+                Spacer(Modifier.width(12.dp))
+                Button(
+                    onClick = onButtonClick,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selectedCount == 0) MaterialTheme.colorScheme.primary else ColorSelectedBorder
+                    ),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        if (selectedCount == 0) Icons.Default.Bolt else Icons.Default.CheckCircle, 
+                        null, 
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = if (selectedCount == 0) "VENTA RÁPIDA" else "CONFIRMAR ($selectedCount)",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
             }
         }
@@ -451,43 +448,78 @@ private fun GroupSellDialog(
 
 @Composable
 private fun RaffleHeaderSaaS(raffle: Raffle, onEditClick: () -> Unit, onOpenSoldTickets: () -> Unit) {
+    val dateFormat = SimpleDateFormat("dd MMM, yyyy", Locale.forLanguageTag("es-ES"))
+    val dateStr = dateFormat.format(Date(raffle.drawDate))
+    val sourceStr = when(raffle.source) {
+        RaffleSource.LOTERIA_NACIONAL -> "Lotería Nal."
+        RaffleSource.CHANCES -> "Chances"
+        RaffleSource.SORTEO -> "Sorteo Especial"
+        RaffleSource.MANUAl -> "Manual"
+        RaffleSource.OTRO -> "Otro"
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth().padding(12.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(90.dp).clip(RoundedCornerShape(20.dp)).clickable { onEditClick() }) {
-                if (raffle.prizePhotoPath != null) {
-                    AsyncImage(model = raffle.prizePhotoPath, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    Surface(color = Color.Black.copy(alpha = 0.5f), shape = CircleShape, modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(24.dp)) {
-                        Icon(Icons.Default.Edit, null, tint = Color.White, modifier = Modifier.padding(4.dp))
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(70.dp).clip(RoundedCornerShape(14.dp)).clickable { onEditClick() }) {
+                    if (raffle.prizePhotoPath != null) {
+                        AsyncImage(model = raffle.prizePhotoPath, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Image, null, tint = Color.Gray, modifier = Modifier.size(24.dp))
+                        }
                     }
-                } else {
-                    val stroke = Stroke(width = 2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f))
-                    Canvas(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
-                        drawRoundRect(color = Color.LightGray, style = stroke)
-                    }
-                    Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.Center).size(28.dp))
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(raffle.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                    Text(raffle.prizeName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Surface(color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold.copy(alpha = 0.1f) else Color.LightGray, shape = RoundedCornerShape(6.dp)) {
+                    Text(if(raffle.status == RaffleStatus.ACTIVE) "ACTIVA" else "CERRADA", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold else Color.Gray, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(raffle.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Surface(color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold.copy(alpha = 0.1f) else Color.LightGray, shape = RoundedCornerShape(8.dp)) {
-                        Text(if(raffle.status == RaffleStatus.ACTIVE) "ACTIVA" else "CERRADA", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold else Color.Gray, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Text(raffle.prizeName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(12.dp))
-                FilledTonalButton(onClick = onOpenSoldTickets, modifier = Modifier.height(34.dp), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp), shape = RoundedCornerShape(12.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.ListAlt, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Detalle de Ventas", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                RaffleDetailItemCompact(Icons.Default.Payments, "Precio", "₡${raffle.ticketPrice.toInt()}")
+                RaffleDetailItemCompact(Icons.Default.Event, "Sorteo", dateStr)
+                RaffleDetailItemCompact(Icons.Default.ConfirmationNumber, "Tipo", sourceStr)
             }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            OutlinedButton(
+                onClick = onOpenSoldTickets, 
+                modifier = Modifier.fillMaxWidth().height(36.dp),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(0.dp),
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ListAlt, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("VER DETALLE DE VENTAS", fontWeight = FontWeight.ExtraBold, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RaffleDetailItemCompact(icon: ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(4.dp))
+        Column {
+            Text(label, fontSize = 8.sp, color = Color.Gray)
+            Text(value, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
         }
     }
 }
@@ -498,7 +530,8 @@ private fun TicketActionSheetContent(ticket: Ticket, canModify: Boolean, onToggl
         Text("Número ${ticket.number}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(vertical = 16.dp))
         ListItem(headlineContent = { Text("Cliente: ${ticket.buyerName ?: "Sin nombre"}") }, supportingContent = { Text("Estado: ${if(ticket.status == TicketStatus.SOLD) "Vendido" else "Apartado"}") }, leadingContent = { Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.primary) })
         if (canModify) {
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(8.dp))
             if (ticket.status == TicketStatus.RESERVED) {
                 ListItem(headlineContent = { Text("Confirmar Pago (Marcar como Vendido)", fontWeight = FontWeight.Bold, color = ColorSold) }, leadingContent = { Icon(Icons.Default.CheckCircle, null, tint = ColorSold) }, modifier = Modifier.clickable { onToggleStatus(ticket) })
             } else {
@@ -511,9 +544,9 @@ private fun TicketActionSheetContent(ticket: Ticket, canModify: Boolean, onToggl
 
 @Composable
 private fun LegendRow() {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.Center) {
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.Center) {
         LegendItem(color = ColorAvailable, label = "Libre")
-        Spacer(Modifier.width(20.dp))
+        Spacer(Modifier.width(16.dp))
         LegendItem(color = ColorReserved, label = "Apartado")
         Spacer(Modifier.width(20.dp))
         LegendItem(color = ColorSold, label = "Vendido")
@@ -523,16 +556,16 @@ private fun LegendRow() {
 @Composable
 private fun LegendItem(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(color).border(0.5.dp, Color.Gray.copy(alpha = 0.3f), CircleShape))
-        Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 8.dp))
+        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color).border(0.5.dp, Color.Gray.copy(alpha = 0.3f), CircleShape))
+        Text(text = label, fontSize = 11.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
     }
 }
 
 @Composable
 private fun SummaryStatSmall(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = color)
-        Text(text = label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = color)
+        Text(text = label, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -545,7 +578,7 @@ private fun TicketCell(ticket: Ticket, isSelected: Boolean, onClick: () -> Unit)
         TicketStatus.SOLD -> ColorSold
     }
     val textColor = if (ticket.status == TicketStatus.AVAILABLE && !isSelected) Color(0xFF616161) else Color.White
-    Box(modifier = Modifier.padding(4.dp).aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(backgroundColor).border(width = if (isSelected) 3.dp else 0.dp, color = ColorSelectedBorder, shape = RoundedCornerShape(12.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(text = ticket.number, color = if (isSelected) ColorSelectedBorder else textColor, fontSize = 15.sp, fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold, textAlign = TextAlign.Center)
+    Box(modifier = Modifier.padding(3.dp).aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(backgroundColor).border(width = if (isSelected) 2.dp else 0.dp, color = ColorSelectedBorder, shape = RoundedCornerShape(10.dp)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(text = ticket.number, color = if (isSelected) ColorSelectedBorder else textColor, fontSize = 14.sp, fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }

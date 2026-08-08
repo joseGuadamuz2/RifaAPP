@@ -8,20 +8,14 @@ import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.repository.RaffleRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class RaffleItem(
     val raffle: Raffle,
     val soldCount: Int,
-    val totalCount: Int
+    val totalCount: Int,
+    val collectedAmount: Double // Nueva propiedad
 ) {
     val progress: Float get() = if (totalCount > 0) soldCount.toFloat() / totalCount else 0f
 }
@@ -49,7 +43,14 @@ class HomeViewModel(
                     combine(
                         repository.getTicketsCount(raffle.id),
                         repository.getTicketsCountByStatus(raffle.id, TicketStatus.SOLD)
-                    ) { total: Int, sold: Int -> RaffleItem(raffle, sold, total) }
+                    ) { total: Int, sold: Int -> 
+                        RaffleItem(
+                            raffle = raffle, 
+                            soldCount = sold, 
+                            totalCount = total,
+                            collectedAmount = sold * raffle.ticketPrice // Cálculo del dinero
+                        ) 
+                    }
                 }
                 combine(itemFlows) { items: Array<RaffleItem> -> items.toList() }
             }

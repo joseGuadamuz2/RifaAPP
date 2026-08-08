@@ -1,6 +1,7 @@
 package com.example.lotteryapp.ui.raffle
 
 import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.util.WhatsAppSender
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,8 +43,11 @@ fun SoldTicketsScreen(
     var statusFilter by remember { mutableStateOf<TicketStatus?>(null) }
     
     val context = LocalContext.current
+    val currencyFormat = NumberFormat.getCurrencyInstance(Locale("es", "CR")).apply {
+        maximumFractionDigits = 0
+    }
 
-    // Cálculos SaaS para Dashboard y Reporte
+    // Cálculos para Dashboard
     val totalRecaudado = entries.filter { it.status == TicketStatus.SOLD }.sumOf { it.tickets.size * (raffle?.ticketPrice ?: 0.0) }
     val boletosVendidos = entries.filter { it.status == TicketStatus.SOLD }.sumOf { it.tickets.size }
     val boletosPendientes = entries.filter { it.status == TicketStatus.RESERVED }.sumOf { it.tickets.size }
@@ -59,27 +65,31 @@ fun SoldTicketsScreen(
                 actions = {
                     IconButton(onClick = {
                         val report = buildString {
-                            appendLine("📊 REPORTE SaaS: ${raffle?.name?.uppercase()}")
+                            appendLine("📊 *REPORTE DE VENTAS* 📊")
+                            appendLine("*Rifa:* ${raffle?.name?.uppercase()}")
                             appendLine("━━━━━━━━━━━━━━━━")
-                            appendLine("💰 RECAUDADO: ₡${totalRecaudado.toInt()}")
-                            appendLine("⏳ POR COBRAR: ₡${montoPendiente.toInt()}")
-                            appendLine("🎟️ PAGADOS: $boletosVendidos")
-                            appendLine("🎟️ PENDIENTES: $boletosPendientes")
+                            appendLine("💰 *RECAUDADO:* ${currencyFormat.format(totalRecaudado)}")
+                            appendLine("⏳ *POR COBRAR:* ${currencyFormat.format(montoPendiente)}")
+                            appendLine("🎟️ *PAGADOS:* $boletosVendidos")
+                            appendLine("🎟️ *PENDIENTES:* $boletosPendientes")
                             appendLine("━━━━━━━━━━━━━━━━")
-                            appendLine("\nDETALLE DE CLIENTES:")
-                            buyers.forEach { buyer ->
-                                val status = if (buyer.totalPending > 0) "⏳" else "✅"
-                                appendLine("$status ${buyer.name}: ${buyer.allNumbers.joinToString(", ")}")
+                            appendLine("\n📝 *DETALLE DE CLIENTES:*")
+                            buyers.sortedByDescending { it.totalPaid }.forEach { buyer ->
+                                val statusIcon = if (buyer.totalPending > 0) "⏳" else "✅"
+                                appendLine("$statusIcon *${buyer.name}*")
+                                appendLine("   Numbers: ${buyer.allNumbers.joinToString(", ")}")
+                                if (buyer.totalPending > 0) appendLine("   Debe: ${currencyFormat.format(buyer.totalPending)}")
                             }
+                            appendLine("\n_Generado por LotteryApp_ 🎟️")
                         }
                         val sendIntent = Intent().apply {
                             action = Intent.ACTION_SEND
                             putExtra(Intent.EXTRA_TEXT, report)
                             type = "text/plain"
                         }
-                        context.startActivity(Intent.createChooser(sendIntent, "Exportar Reporte"))
+                        context.startActivity(Intent.createChooser(sendIntent, "Compartir Reporte"))
                     }) {
-                        Icon(Icons.Default.IosShare, contentDescription = "Exportar")
+                        Icon(Icons.Default.Share, contentDescription = "Exportar")
                     }
                 }
             )
@@ -87,9 +97,9 @@ fun SoldTicketsScreen(
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             
-            // DASHBOARD SaaS
+            // DASHBOARD SaaS MEJORADO
             Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -97,23 +107,24 @@ fun SoldTicketsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SummaryStat(label = "Recaudado", value = "₡${totalRecaudado.toInt()}", icon = Icons.Default.Payments, color = Color(0xFF2E7D32))
-                    SummaryStat(label = "Por Cobrar", value = "₡${montoPendiente.toInt()}", icon = Icons.Default.PendingActions, color = Color(0xFFD32F2F))
-                    SummaryStat(label = "Boletos", value = "$boletosVendidos/100", icon = Icons.Default.ConfirmationNumber, color = MaterialTheme.colorScheme.primary)
+                    SummaryStat(label = "Recaudado", value = currencyFormat.format(totalRecaudado), icon = Icons.Default.MonetizationOn, color = Color(0xFF2E7D32))
+                    SummaryStat(label = "Por Cobrar", value = currencyFormat.format(montoPendiente), icon = Icons.Default.HourglassBottom, color = Color(0xFFD32F2F))
+                    SummaryStat(label = "Venta", value = "$boletosVendidos/100", icon = Icons.Default.ConfirmationNumber, color = MaterialTheme.colorScheme.primary)
                 }
             }
 
-            TabRow(selectedTabIndex = selectedTab) {
+            TabRow(selectedTabIndex = selectedTab, containerColor = MaterialTheme.colorScheme.surface) {
                 Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Ventas", fontWeight = FontWeight.Bold) })
                 Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Directorio", fontWeight = FontWeight.Bold) })
             }
 
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Spacer(Modifier.height(16.dp))
                 // BUSCADOR SaaS
                 OutlinedTextField(
                     value = query,
                     onValueChange = viewModel::onSearchQueryChange,
-                    placeholder = { Text("Buscar cliente, número o teléfono...") },
+                    placeholder = { Text("Buscar por cliente o número...") },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.primary) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
@@ -124,8 +135,8 @@ fun SoldTicketsScreen(
                     shape = RoundedCornerShape(16.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     )
                 )
 
@@ -147,13 +158,13 @@ fun SoldTicketsScreen(
         }
     }
 
-    // DIÁLOGOS
+    // DIÁLOGOS (Sin cambios en lógica, solo pulido visual)
     entryToToggleStatus?.let { entry ->
         val isSold = entry.status == TicketStatus.SOLD
         AlertDialog(
             onDismissRequest = { entryToToggleStatus = null },
-            title = { Text("Confirmar Pago") },
-            text = { Text("¿Marcar los boletos ${entry.numbers.joinToString(", ")} de ${entry.buyerName} como ${if (isSold) "Pendientes" else "Pagados"}?") },
+            title = { Text(if (isSold) "Revertir Pago" else "Confirmar Pago") },
+            text = { Text("¿Deseas marcar los boletos ${entry.numbers.joinToString(", ")} como ${if (isSold) "Pendientes" else "Pagados"}?") },
             confirmButton = {
                 Button(onClick = { viewModel.toggleStatus(entry); entryToToggleStatus = null }) { Text("Confirmar") }
             },
@@ -164,12 +175,12 @@ fun SoldTicketsScreen(
     entryToCancel?.let { entry ->
         AlertDialog(
             onDismissRequest = { entryToCancel = null },
-            title = { Text("Borrar Registro", color = MaterialTheme.colorScheme.error) },
-            text = { Text("Los números ${entry.numbers.joinToString(", ")} se liberarán. Esta acción no se puede deshacer.") },
+            title = { Text("Eliminar Registro", color = MaterialTheme.colorScheme.error) },
+            text = { Text("¿Estás seguro de liberar los números ${entry.numbers.joinToString(", ")}? Esta acción no se puede deshacer.") },
             confirmButton = {
                 Button(onClick = { viewModel.cancelEntry(entry); entryToCancel = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Eliminar") }
             },
-            dismissButton = { TextButton(onClick = { entryToCancel = null }) { Text("Volver") } }
+            dismissButton = { TextButton(onClick = { entryToCancel = null }) { Text("Atrás") } }
         )
     }
 
@@ -225,14 +236,21 @@ private fun DirectoryView(
     raffle: com.example.lotteryapp.data.entity.Raffle?
 ) {
     val context = LocalContext.current
+    val currencyFormat = NumberFormat.getCurrencyInstance(Locale("es", "CR")).apply {
+        maximumFractionDigits = 0
+    }
+    
     if (buyers.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin clientes registrados.", color = Color.Gray) }
+        Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) { 
+            Text("Aún no tienes clientes registrados.", color = Color.Gray, textAlign = androidx.compose.ui.text.style.TextAlign.Center) 
+        }
     } else {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 100.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 100.dp, top = 8.dp)) {
             items(buyers) { buyer ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
@@ -244,24 +262,24 @@ private fun DirectoryView(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(buyer.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                Text("${buyer.tickets.size} boletos asignados", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text("${buyer.tickets.size} boletos totales", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                             }
                         }
                         
                         Spacer(Modifier.height(12.dp))
-                        Text("Números: ${buyer.allNumbers.joinToString(", ")}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp)
+                        Text("Boletos: ${buyer.allNumbers.joinToString(", ")}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp)
                         
                         HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                         
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column {
-                                Text("Total Invertido", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                Text("₡${(buyer.totalPaid + buyer.totalPending).toInt()}", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                                Text("Inversión Total", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text(currencyFormat.format(buyer.totalPaid + buyer.totalPending), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                             }
                             if (buyer.totalPending > 0) {
                                 Button(
                                     onClick = {
-                                        val msg = "Hola ${buyer.name}, tienes un saldo pendiente de ₡${buyer.totalPending.toInt()} en la Rifa ${raffle?.name}. ¡Gracias!"
+                                        val msg = "Hola ${buyer.name}, tienes un saldo pendiente de ${currencyFormat.format(buyer.totalPending)} en la Rifa ${raffle?.name}. ¡Gracias!"
                                         WhatsAppSender.sendCustomMessage(context, buyer.phone, msg)
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
@@ -270,7 +288,7 @@ private fun DirectoryView(
                                 ) {
                                     Icon(Icons.Default.NotificationsActive, null, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Recordar Pago", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("Cobrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                             } else {
                                 AssistChip(onClick = {}, label = { Text("AL DÍA", fontWeight = FontWeight.Bold) }, leadingIcon = { Icon(Icons.Default.Verified, null, Modifier.size(18.dp), Color(0xFF2E7D32)) })
@@ -286,7 +304,7 @@ private fun DirectoryView(
 @Composable
 private fun SummaryStat(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, null, modifier = Modifier.size(20.dp), tint = color)
+        Icon(icon, null, modifier = Modifier.size(22.dp), tint = color)
         Text(text = value, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = color)
         Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
     }
@@ -307,6 +325,7 @@ private fun SaleEntryCardSaaS(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -316,8 +335,17 @@ private fun SaleEntryCardSaaS(
                     Text(text = entry.buyerName ?: "Sin Nombre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(text = "Boletos: ${entry.numbers.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
                 }
-                Surface(color = if (isSold) Color(0xFFE8F5E9) else Color(0xFFFFF8E1), shape = RoundedCornerShape(12.dp)) {
-                    Text(text = if (isSold) "PAGADO" else "PENDIENTE", modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = if (isSold) Color(0xFF2E7D32) else Color(0xFFF57F17), fontWeight = FontWeight.ExtraBold)
+                Surface(
+                    color = if (isSold) Color(0xFFE8F5E9) else Color(0xFFFFF3E0), 
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = if (isSold) "PAGADO" else "PENDIENTE", 
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = if (isSold) Color(0xFF2E7D32) else Color(0xFFE65100), 
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
             }
 
@@ -325,26 +353,45 @@ private fun SaleEntryCardSaaS(
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!isSold && hasPhone) {
-                    Button(onClick = onSendReminder, modifier = Modifier.weight(1.5f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)), shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(0.dp)) {
+                    Button(
+                        onClick = onSendReminder, 
+                        modifier = Modifier.weight(1.5f), 
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)), 
+                        shape = RoundedCornerShape(12.dp), 
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
                         Icon(Icons.Default.NotificationsActive, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Cobrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 } else if (isSold && hasPhone) {
-                    FilledTonalButton(onClick = onResend, modifier = Modifier.weight(1.5f), shape = RoundedCornerShape(12.dp)) {
+                    FilledTonalButton(
+                        onClick = onResend, 
+                        modifier = Modifier.weight(1.5f), 
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
                         Icon(Icons.Default.Share, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Recibo", fontSize = 11.sp)
                     }
                 }
 
-                IconButton(onClick = onToggleStatus, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)) {
+                IconButton(
+                    onClick = onToggleStatus, 
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
+                ) {
                     Icon(if (isSold) Icons.Default.SyncAlt else Icons.Default.CheckCircle, null, tint = if (isSold) Color.Gray else Color(0xFF2E7D32))
                 }
-                IconButton(onClick = onEditPhone, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)) {
-                    Icon(Icons.Default.Phone, null, modifier = Modifier.size(18.dp))
+                IconButton(
+                    onClick = onEditPhone, 
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
+                ) {
+                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
                 }
-                IconButton(onClick = onCancel, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)) {
+                IconButton(
+                    onClick = onCancel, 
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
+                ) {
                     Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error)
                 }
             }
@@ -359,7 +406,15 @@ private fun EditPhoneDialog(currentPhone: String?, onDismiss: () -> Unit, onConf
         onDismissRequest = onDismiss,
         title = { Text("Actualizar Contacto") },
         text = {
-            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("WhatsApp (8 dígitos)") }, placeholder = { Text("Ej: 88888888") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(
+                value = phone, 
+                onValueChange = { if (it.length <= 8) phone = it.filter { c -> c.isDigit() } }, 
+                label = { Text("WhatsApp (8 dígitos)") }, 
+                placeholder = { Text("Ej: 88888888") }, 
+                modifier = Modifier.fillMaxWidth(), 
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone)
+            )
         },
         confirmButton = { Button(onClick = { onConfirm(phone.ifBlank { null }) }) { Text("Guardar") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
