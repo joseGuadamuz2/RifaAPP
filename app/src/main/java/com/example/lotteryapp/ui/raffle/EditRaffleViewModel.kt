@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 data class EditRaffleUiState(
     val name: String = "",
     val prizeName: String = "",
+    val prizePhotoPath: String? = null,
     val ticketPrice: String = "",
     val source: RaffleSource = RaffleSource.LOTERIA_NACIONAL,
     val drawDate: Long? = null,
@@ -36,6 +37,7 @@ class EditRaffleViewModel(
                 _uiState.value = EditRaffleUiState(
                     name = raffle.name,
                     prizeName = raffle.prizeName,
+                    prizePhotoPath = raffle.prizePhotoPath,
                     ticketPrice = raffle.ticketPrice.toString(),
                     source = raffle.source,
                     drawDate = raffle.drawDate,
@@ -51,6 +53,10 @@ class EditRaffleViewModel(
 
     fun onPrizeNameChange(value: String) {
         _uiState.value = _uiState.value.copy(prizeName = value)
+    }
+
+    fun onPrizePhotoChange(value: String?) {
+        _uiState.value = _uiState.value.copy(prizePhotoPath = value)
     }
 
     fun onTicketPriceChange(value: String) {
@@ -82,6 +88,7 @@ class EditRaffleViewModel(
                 existing.copy(
                     name = state.name,
                     prizeName = state.prizeName,
+                    prizePhotoPath = state.prizePhotoPath,
                     ticketPrice = price,
                     drawDate = date,
                     source = state.source

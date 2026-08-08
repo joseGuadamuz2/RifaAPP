@@ -3,26 +3,32 @@ package com.example.lotteryapp.ui.raffle
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -31,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -92,8 +99,22 @@ fun TicketGridScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(text = raffle?.name ?: "", fontWeight = FontWeight.Bold)
-                        raffle?.prizeName?.let { Text(text = it, fontSize = 13.sp) }
+                        Text(
+                            text = raffle?.name ?: "", 
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        raffle?.prizeName?.let { 
+                            Text(
+                                text = it, 
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            ) 
+                        }
                     }
                 },
                 navigationIcon = {
@@ -109,8 +130,32 @@ fun TicketGridScreen(
                     }) {
                         Icon(Icons.Filled.Share, contentDescription = "Compartir estado")
                     }
-                    TextButton(onClick = onOpenSoldTickets) {
-                        Text("Ventas")
+                    
+                    // Botón de Ventas llamativo (Verde)
+                    Button(
+                        onClick = onOpenSoldTickets,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .height(38.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ColorSold,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ListAlt,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Ventas",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
                     }
                 }
             )
@@ -168,7 +213,12 @@ fun TicketGridScreen(
             }
 
             HorizontalDivider()
-            SummaryBar(sold = soldCount, reserved = reservedCount, available = availableCount)
+            SummaryBar(
+                sold = soldCount, 
+                reserved = reservedCount, 
+                available = availableCount,
+                onSoldClick = onOpenSoldTickets // También hacemos clic en el resumen
+            )
         }
     }
 
@@ -292,22 +342,39 @@ private fun LegendItem(color: Color, label: String) {
 }
 
 @Composable
-private fun SummaryBar(sold: Int, reserved: Int, available: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+private fun SummaryBar(sold: Int, reserved: Int, available: Int, onSoldClick: () -> Unit) {
+    Surface(
+        tonalElevation = 2.dp,
+        shadowElevation = 4.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        SummaryItem(label = "Vendidos", value = sold, color = ColorSold)
-        SummaryItem(label = "Apartados", value = reserved, color = ColorReserved)
-        SummaryItem(label = "Disponibles", value = available, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            SummaryItem(
+                label = "Vendidos", 
+                value = sold, 
+                color = ColorSold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onSoldClick() }
+                    .padding(horizontal = 8.dp)
+            )
+            SummaryItem(label = "Apartados", value = reserved, color = ColorReserved)
+            SummaryItem(label = "Disponibles", value = available, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
 @Composable
-private fun SummaryItem(label: String, value: Int, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun SummaryItem(label: String, value: Int, color: Color, modifier: Modifier = Modifier) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+    ) {
         Text(text = value.toString(), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = color)
         Text(text = label, fontSize = 12.sp)
     }

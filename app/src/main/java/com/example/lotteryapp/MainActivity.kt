@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
                             )
                             EditRaffleScreen(
                                 viewModel = viewModel,
+                                onBack = { navController.popBackStack() },
                                 onRaffleUpdated = { navController.popBackStack() }
                             )
                         }
