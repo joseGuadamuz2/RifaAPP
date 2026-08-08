@@ -25,10 +25,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.LocalActivity
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -41,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -57,10 +63,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lotteryapp.data.entity.Raffle
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.util.ImageSharingHelper
 import com.example.lotteryapp.util.WhatsAppSender
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val ColorAvailable = Color(0xFFECEFF1)
 private val ColorReserved = Color(0xFFFFD54F)
@@ -97,26 +107,7 @@ fun TicketGridScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = raffle?.name ?: "", 
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        raffle?.prizeName?.let { 
-                            Text(
-                                text = it, 
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            ) 
-                        }
-                    }
-                },
+                title = { Text("Detalles de Rifa", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
@@ -131,7 +122,6 @@ fun TicketGridScreen(
                         Icon(Icons.Filled.Share, contentDescription = "Compartir estado")
                     }
                     
-                    // Botón de Ventas llamativo (Verde)
                     Button(
                         onClick = onOpenSoldTickets,
                         modifier = Modifier
@@ -151,20 +141,22 @@ fun TicketGridScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Ventas",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
+                        Text(text = "Ventas", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
 
+            raffle?.let { RaffleHeader(it) }
+
             LegendRow()
-            HorizontalDivider()
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             if (isSelectionMode) {
                 SelectionBar(
@@ -217,11 +209,12 @@ fun TicketGridScreen(
                 sold = soldCount, 
                 reserved = reservedCount, 
                 available = availableCount,
-                onSoldClick = onOpenSoldTickets // También hacemos clic en el resumen
+                onSoldClick = onOpenSoldTickets
             )
         }
     }
 
+    // Dialogs...
     ticketToSell?.let { ticket ->
         SellTicketDialog(
             ticket = ticket,
@@ -315,14 +308,109 @@ fun TicketGridScreen(
 }
 
 @Composable
+private fun RaffleHeader(raffle: Raffle) {
+    val locale = remember { Locale.forLanguageTag("es-CR") }
+    val dateFormat = remember { SimpleDateFormat("EEE, d MMM yyyy", locale) }
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Placeholder para Foto del Premio
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Image,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = raffle.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Premio: ${raffle.prizeName}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.LocalActivity, 
+                            contentDescription = null, 
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "₡${raffle.ticketPrice.toInt()}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.CalendarMonth, 
+                            contentDescription = null, 
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = dateFormat.format(Date(raffle.drawDate)),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun LegendRow() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 20.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        LegendItem(color = ColorAvailable, label = "Disponible")
+        LegendItem(color = ColorAvailable, label = "Libre")
         LegendItem(color = ColorReserved, label = "Apartado")
         LegendItem(color = ColorSold, label = "Vendido")
     }
@@ -333,11 +421,11 @@ private fun LegendItem(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .size(12.dp)
+                .size(10.dp)
                 .clip(CircleShape)
                 .background(color)
         )
-        Text(text = label, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp))
+        Text(text = label, fontSize = 11.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 6.dp))
     }
 }
 
@@ -345,13 +433,13 @@ private fun LegendItem(color: Color, label: String) {
 private fun SummaryBar(sold: Int, reserved: Int, available: Int, onSoldClick: () -> Unit) {
     Surface(
         tonalElevation = 2.dp,
-        shadowElevation = 4.dp,
+        shadowElevation = 8.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             SummaryItem(
@@ -361,10 +449,10 @@ private fun SummaryBar(sold: Int, reserved: Int, available: Int, onSoldClick: ()
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .clickable { onSoldClick() }
-                    .padding(horizontal = 8.dp)
+                    .padding(horizontal = 12.dp)
             )
             SummaryItem(label = "Apartados", value = reserved, color = ColorReserved)
-            SummaryItem(label = "Disponibles", value = available, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SummaryItem(label = "Libres", value = available, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -375,26 +463,35 @@ private fun SummaryItem(label: String, value: Int, color: Color, modifier: Modif
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        Text(text = value.toString(), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = color)
-        Text(text = label, fontSize = 12.sp)
+        Text(text = value.toString(), fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = color)
+        Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun SelectionBar(count: Int, onCancel: () -> Unit, onConfirm: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        TextButton(onClick = onCancel) {
-            Text("Cancelar")
-        }
-        Text("$count seleccionados")
-        Button(onClick = onConfirm, enabled = count > 0) {
-            Text("Vender grupo")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onCancel) {
+                Text("Cancelar", color = MaterialTheme.colorScheme.error)
+            }
+            Text("$count seleccionados", fontWeight = FontWeight.Bold)
+            Button(
+                onClick = onConfirm, 
+                enabled = count > 0,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Vender grupo")
+            }
         }
     }
 }
@@ -431,7 +528,8 @@ private fun TicketCell(
         Text(
             text = ticket.number,
             color = textColor,
-            fontWeight = FontWeight.Medium,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
     }
