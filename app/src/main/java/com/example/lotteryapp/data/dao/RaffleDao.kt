@@ -29,4 +29,5 @@ interface RaffleDao {
 
     @Query("SELECT * FROM raffles WHERE status = :status AND name LIKE '%' || :query || '%' ORDER BY drawDate ASC")
     fun searchByStatus(status: RaffleStatus, query: String): Flow<List<Raffle>>
+
 }

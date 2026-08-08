@@ -137,4 +137,17 @@ class RaffleRepository(
         raffleDao.update(raffle.copy(winningNumber = winningNumber, status = RaffleStatus.CLOSED))
     }
     fun getActiveRaffles(): Flow<List<Raffle>> = raffleDao.getByStatus(RaffleStatus.ACTIVE)
+
+    fun getRafflesByStatus(status: RaffleStatus, query: String): Flow<List<Raffle>> {
+        return if (query.isEmpty()) {
+            raffleDao.getByStatus(status)
+        } else {
+            raffleDao.searchByStatus(status, query)
+        }
+    }
+
+    fun getTicketsCount(raffleId: String): Flow<Int> = ticketDao.getCountByRaffle(raffleId)
+
+    fun getTicketsCountByStatus(raffleId: String, status: TicketStatus): Flow<Int> =
+        ticketDao.getCountByStatus(raffleId, status)
 }

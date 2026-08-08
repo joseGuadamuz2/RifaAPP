@@ -36,4 +36,11 @@ interface TicketDao {
 
     @Query("SELECT * FROM tickets WHERE groupId = :groupId")
     suspend fun getByGroupId(groupId: String): List<Ticket>
+
+    @Query("SELECT COUNT(*) FROM tickets WHERE raffleId = :raffleId")
+    fun getCountByRaffle(raffleId: String): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM tickets WHERE raffleId = :raffleId AND status = :status")
+    fun getCountByStatus(raffleId: String, status: TicketStatus): Flow<Int>
+
 }

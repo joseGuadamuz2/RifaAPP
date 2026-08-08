@@ -2,10 +2,17 @@ package com.example.lotteryapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Paleta de marca — índigo, look moderno tipo SaaS
+val BrandPrimary = Color(0xFF4F46E5)
+val BrandPrimaryContainer = Color(0xFFE0E0FC)
+val BrandOnPrimaryContainer = Color(0xFF1A1470)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val BrandSecondary = Color(0xFF64748B)
+val BrandSecondaryContainer = Color(0xFFE2E8F0)
+
+val BrandTertiary = Color(0xFF16A34A)
+val BrandTertiaryContainer = Color(0xFFDCFCE7)
+
+val BrandBackground = Color(0xFFFAFAFC)
+val BrandSurface = Color(0xFFFFFFFF)
+val BrandError = Color(0xFFDC2626)
