@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
                             )
                             CreateRaffleScreen(
                                 viewModel = viewModel,
+                                onBack = { navController.popBackStack() },
                                 onRaffleSaved = { raffleId ->
                                     navController.navigate("ticketGrid/$raffleId") {
                                         popUpTo("home")

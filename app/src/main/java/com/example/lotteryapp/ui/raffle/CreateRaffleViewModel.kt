@@ -17,10 +17,15 @@ data class CreateRaffleUiState(
     val ticketPrice: String = "",
     val source: RaffleSource = RaffleSource.LOTERIA_NACIONAL,
     val drawDate: Long? = null,
+    val prizePhotoPath: String? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val createdRaffleId: String? = null
-)
+) {
+    val isFormValid: Boolean
+        get() = name.isNotBlank() && prizeName.isNotBlank() &&
+                ticketPrice.toDoubleOrNull() != null && drawDate != null
+}
 
 class CreateRaffleViewModel(
     private val repository: RaffleRepository
@@ -49,14 +54,16 @@ class CreateRaffleViewModel(
         _uiState.value = _uiState.value.copy(drawDate = value)
     }
 
+    fun onPrizePhotoChange(uri: String?) {
+        _uiState.value = _uiState.value.copy(prizePhotoPath = uri)
+    }
+
     fun saveRaffle() {
         val state = _uiState.value
         val price = state.ticketPrice.toDoubleOrNull()
         val date = state.drawDate
 
-        if (state.name.isBlank() || state.prizeName.isBlank() || price == null || date == null) {
-            return // más adelante acá mostramos un mensaje de error en la UI
-        }
+        if (!state.isFormValid || price == null || date == null) return
 
         _uiState.value = state.copy(isSaving = true)
 
@@ -66,7 +73,8 @@ class CreateRaffleViewModel(
                 prizeName = state.prizeName,
                 ticketPrice = price,
                 drawDate = date,
-                source = state.source
+                source = state.source,
+                prizePhotoPath = state.prizePhotoPath
             )
             repository.createRaffle(raffle)
             _uiState.value = _uiState.value.copy(
