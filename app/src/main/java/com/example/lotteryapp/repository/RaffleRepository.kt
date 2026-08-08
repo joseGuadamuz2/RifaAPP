@@ -17,63 +17,47 @@ class RaffleRepository(
     private val cancellationHistoryDao: CancellationHistoryDao
 ) {
 
-    // --- Rifas ---
-
+    // --- Gestión de Rifas ---
     suspend fun createRaffle(raffle: Raffle) {
         raffleDao.insert(raffle)
         val tickets = (0..99).map { number ->
-            Ticket(
-                raffleId = raffle.id,
-                number = number.toString().padStart(2, '0')
-            )
+            Ticket(raffleId = raffle.id, number = number.toString().padStart(2, '0'))
         }
         ticketDao.insertAll(tickets)
     }
 
     suspend fun getRaffleById(raffleId: String): Raffle? = raffleDao.getById(raffleId)
-
     suspend fun updateRaffle(raffle: Raffle) = raffleDao.update(raffle)
-
     suspend fun deleteRaffle(raffle: Raffle) = raffleDao.delete(raffle)
-    fun getTicketsForRaffle(raffleId: String): Flow<List<Ticket>> =
-        ticketDao.getByRaffle(raffleId)
+    
+    fun getTicketsForRaffle(raffleId: String): Flow<List<Ticket>> = ticketDao.getByRaffle(raffleId)
 
-    // --- Venta / apartado ---
-
-    suspend fun sellOrReserveTicket(
-        ticket: Ticket,
-        buyerName: String,
-        buyerPhone: String?,
-        status: TicketStatus
-    ): Ticket {
-        val updated = ticket.copy(
-            buyerName = buyerName,
-            buyerPhone = buyerPhone,
-            status = status
-        )
-        ticketDao.update(updated)
-        return updated
-    }
-
-    suspend fun changeTicketStatus(ticket: Ticket, newStatus: TicketStatus): Ticket {
-        val updated = ticket.copy(status = newStatus)
-        ticketDao.update(updated)
-        return updated
-    }
-
-    suspend fun updateBuyerPhone(tickets: List<Ticket>, newPhone: String?): List<Ticket> {
-        val updated = tickets.map { it.copy(buyerPhone = newPhone) }
-        updated.forEach { ticketDao.update(it) }
-        return updated
-    }
-
-
+    // --- Venta y Apartado con Validación Atómica ---
     suspend fun sellOrReserveGroup(
         tickets: List<Ticket>,
         buyerName: String,
         buyerPhone: String?,
         status: TicketStatus
-    ): List<Ticket> {
+    ): Result<List<Ticket>> {
+        val unavailableNumbers = mutableListOf<String>()
+        
+        // 🛡️ VALIDACIÓN DE DISPONIBILIDAD (CONCURRENCIA)
+        for (t in tickets) {
+            val current = ticketDao.getById(t.id)
+            if (current == null || current.status != TicketStatus.AVAILABLE) {
+                unavailableNumbers.add(t.number)
+            }
+        }
+
+        if (unavailableNumbers.isNotEmpty()) {
+            val msg = if (unavailableNumbers.size == 1) 
+                "El número ${unavailableNumbers[0]} ya no está disponible."
+            else 
+                "Los números ${unavailableNumbers.joinToString(", ")} ya han sido vendidos o apartados por otro usuario."
+            return Result.failure(Exception(msg))
+        }
+
+        // PROCESAMIENTO SaaS (Agrupación en una sola transacción visual)
         val groupId = UUID.randomUUID().toString()
         val updated = tickets.map { ticket ->
             ticket.copy(
@@ -84,10 +68,18 @@ class RaffleRepository(
             )
         }
         updated.forEach { ticketDao.update(it) }
-        return updated
+        return Result.success(updated)
     }
 
-    // --- Cancelación ---
+    suspend fun changeTicketStatus(ticket: Ticket, newStatus: TicketStatus): Result<Ticket> {
+        val current = ticketDao.getById(ticket.id) ?: return Result.failure(Exception("Ticket no encontrado"))
+        if (current.status == TicketStatus.AVAILABLE) {
+            return Result.failure(Exception("No se puede cambiar el estado de un número libre sin datos de comprador."))
+        }
+        val updated = current.copy(status = newStatus)
+        ticketDao.update(updated)
+        return Result.success(updated)
+    }
 
     suspend fun cancelTicket(ticket: Ticket) {
         cancellationHistoryDao.insert(
@@ -98,48 +90,37 @@ class RaffleRepository(
                 cancellationDate = System.currentTimeMillis()
             )
         )
-        val reset = ticket.copy(
+        ticketDao.update(ticket.copy(
             buyerName = null,
             buyerPhone = null,
             status = TicketStatus.AVAILABLE,
-            groupId = null,
-            imageSent = false
-        )
-        ticketDao.update(reset)
+            groupId = null
+        ))
     }
 
-    // --- Registro de ventas ---
-
+    // --- Consultas ---
     fun searchSoldOrReserved(raffleId: String, query: String): Flow<List<Ticket>> =
         ticketDao.searchSoldOrReserved(raffleId, query)
 
     suspend fun getTicketsByGroup(groupId: String): List<Ticket> =
         ticketDao.getByGroupId(groupId)
 
-    suspend fun changeTicketsStatus(tickets: List<Ticket>, newStatus: TicketStatus): List<Ticket> {
-        val updated = tickets.map { it.copy(status = newStatus) }
-        updated.forEach { ticketDao.update(it) }
-        return updated
+    suspend fun changeTicketsStatus(tickets: List<Ticket>, newStatus: TicketStatus) {
+        tickets.forEach { ticketDao.update(it.copy(status = newStatus)) }
     }
 
     suspend fun cancelTickets(tickets: List<Ticket>) {
         tickets.forEach { cancelTicket(it) }
     }
 
-    // --- Ganador ---
-
-    suspend fun findWinner(raffleId: String, winningNumber: String): Ticket? {
-        val ticket = ticketDao.getByNumber(raffleId, winningNumber)
-        return if (ticket?.status == TicketStatus.SOLD) ticket else null
+    suspend fun updateBuyerPhone(tickets: List<Ticket>, newPhone: String?) {
+        tickets.forEach { ticketDao.update(it.copy(buyerPhone = newPhone)) }
     }
 
-    suspend fun closeRaffle(raffle: Raffle, winningNumber: String) {
-        raffleDao.update(raffle.copy(winningNumber = winningNumber, status = RaffleStatus.CLOSED))
-    }
     fun getActiveRaffles(): Flow<List<Raffle>> = raffleDao.getByStatus(RaffleStatus.ACTIVE)
 
     fun getRafflesByStatus(status: RaffleStatus, query: String): Flow<List<Raffle>> {
-        return if (query.isEmpty()) {
+        return if (query.isBlank()) {
             raffleDao.getByStatus(status)
         } else {
             raffleDao.searchByStatus(status, query)

@@ -17,6 +17,9 @@ interface TicketDao {
     @Update
     suspend fun update(ticket: Ticket)
 
+    @Query("SELECT * FROM tickets WHERE id = :id")
+    suspend fun getById(id: String): Ticket?
+
     @Query("SELECT * FROM tickets WHERE raffleId = :raffleId ORDER BY number ASC")
     fun getByRaffle(raffleId: String): Flow<List<Ticket>>
 
@@ -25,7 +28,7 @@ interface TicketDao {
         SELECT * FROM tickets 
         WHERE raffleId = :raffleId 
         AND status != 'AVAILABLE'
-        AND (buyerName LIKE '%' || :query || '%' OR number LIKE '%' || :query || '%')
+        AND (buyerName LIKE '%' || :query || '%' OR number LIKE '%' || :query || '%' OR buyerPhone LIKE '%' || :query || '%')
         ORDER BY number ASC
         """
     )

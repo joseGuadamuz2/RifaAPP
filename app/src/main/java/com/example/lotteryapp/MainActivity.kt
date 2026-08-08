@@ -89,7 +89,8 @@ class MainActivity : ComponentActivity() {
                             TicketGridScreen(
                                 viewModel = viewModel,
                                 onBack = { navController.popBackStack() },
-                                onOpenSoldTickets = { navController.navigate("soldTickets/$raffleId") }
+                                onOpenSoldTickets = { navController.navigate("soldTickets/$raffleId") },
+                                onEditRaffle = { id -> navController.navigate("editRaffle/$id") }
                             )
                         }
 

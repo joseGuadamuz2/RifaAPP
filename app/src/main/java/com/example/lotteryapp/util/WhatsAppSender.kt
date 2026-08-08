@@ -18,6 +18,12 @@ object WhatsAppSender {
         if (phone.isNullOrBlank()) return
 
         val message = buildMessage(raffle, tickets)
+        sendCustomMessage(context, phone, message)
+    }
+
+    fun sendCustomMessage(context: Context, phone: String?, message: String) {
+        if (phone.isNullOrBlank()) return
+
         var cleanPhone = phone.filter { it.isDigit() }
         
         // Si el número tiene 8 dígitos, se le agrega el código de país (Costa Rica)
@@ -42,7 +48,7 @@ object WhatsAppSender {
             appendLine("Premio: ${raffle.prizeName}")
             appendLine("Número(s): $numbers")
             appendLine("Fecha del sorteo: $dateText")
-            appendLine("Precio por boleto: ₡${raffle.ticketPrice}")
+            appendLine("Precio por boleto: ₡${raffle.ticketPrice.toInt()}")
             appendLine("Comprador: $buyerName")
             append("Estado: $statusText")
         }

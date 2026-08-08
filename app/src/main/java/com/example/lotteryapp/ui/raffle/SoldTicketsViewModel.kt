@@ -7,12 +7,7 @@ import com.example.lotteryapp.data.entity.Raffle
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.repository.RaffleRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class SaleEntry(
@@ -23,6 +18,16 @@ data class SaleEntry(
     val buyerName: String? get() = tickets.firstOrNull()?.buyerName
     val buyerPhone: String? get() = tickets.firstOrNull()?.buyerPhone
     val status: TicketStatus get() = tickets.firstOrNull()?.status ?: TicketStatus.AVAILABLE
+}
+
+data class BuyerSummary(
+    val name: String,
+    val phone: String?,
+    val tickets: List<Ticket>,
+    val totalPending: Double,
+    val totalPaid: Double
+) {
+    val allNumbers: List<String> get() = tickets.map { it.number }.sorted()
 }
 
 class SoldTicketsViewModel(
@@ -42,14 +47,28 @@ class SoldTicketsViewModel(
         }
     }
 
+    // Lista de entradas (ventas individuales o grupales)
     val entries: StateFlow<List<SaleEntry>> = _searchQuery
         .flatMapLatest { query -> repository.searchSoldOrReserved(raffleId, query) }
         .map { matched -> buildEntries(matched) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Directorio de Clientes (Agrupado por nombre/teléfono)
+    val buyers: StateFlow<List<BuyerSummary>> = entries.map { saleEntries ->
+        val tickets = saleEntries.flatMap { it.tickets }
+        val price = _raffle.value?.ticketPrice ?: 0.0
+        
+        tickets.groupBy { it.buyerName ?: "Anónimo" }
+            .map { (name, buyerTickets) ->
+                BuyerSummary(
+                    name = name,
+                    phone = buyerTickets.firstOrNull()?.buyerPhone,
+                    tickets = buyerTickets,
+                    totalPaid = buyerTickets.count { it.status == TicketStatus.SOLD } * price,
+                    totalPending = buyerTickets.count { it.status == TicketStatus.RESERVED } * price
+                )
+            }.sortedByDescending { it.totalPaid + it.totalPending }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private suspend fun buildEntries(matched: List<Ticket>): List<SaleEntry> {
         val individualEntries = mutableListOf<SaleEntry>()
@@ -66,7 +85,6 @@ class SoldTicketsViewModel(
                 groupEntries.add(SaleEntry(tickets = fullGroup, groupId = groupId))
             }
         }
-
         return (individualEntries + groupEntries).sortedBy { it.numbers.firstOrNull() }
     }
 
@@ -76,30 +94,27 @@ class SoldTicketsViewModel(
 
     fun toggleStatus(entry: SaleEntry) {
         val newStatus = if (entry.status == TicketStatus.SOLD) TicketStatus.RESERVED else TicketStatus.SOLD
-        viewModelScope.launch {
-            repository.changeTicketsStatus(entry.tickets, newStatus)
-        }
+        viewModelScope.launch { repository.changeTicketsStatus(entry.tickets, newStatus) }
     }
 
     fun cancelEntry(entry: SaleEntry) {
-        viewModelScope.launch {
-            repository.cancelTickets(entry.tickets)
-        }
-    }
-
-    class Factory(
-        private val repository: RaffleRepository,
-        private val raffleId: String
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return SoldTicketsViewModel(repository, raffleId) as T
-        }
+        viewModelScope.launch { repository.cancelTickets(entry.tickets) }
     }
 
     fun editPhone(entry: SaleEntry, newPhone: String?) {
-        viewModelScope.launch {
-            repository.updateBuyerPhone(entry.tickets, newPhone)
+        viewModelScope.launch { repository.updateBuyerPhone(entry.tickets, newPhone) }
+    }
+
+    fun getReminderMessage(entry: SaleEntry): String {
+        val raffleName = _raffle.value?.name ?: "la rifa"
+        val total = entry.tickets.size * (_raffle.value?.ticketPrice ?: 0.0)
+        return "Hola ${entry.buyerName}, te saludo de la Rifa $raffleName. Paso a recordarte el pago de tus números: ${entry.numbers.joinToString(", ")}. El total es ₡${total.toInt()}. ¡Gracias!"
+    }
+
+    class Factory(private val repository: RaffleRepository, private val raffleId: String) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return SoldTicketsViewModel(repository, raffleId) as T
         }
     }
 }

@@ -10,6 +10,7 @@ import com.example.lotteryapp.repository.RaffleRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -26,26 +27,17 @@ class TicketGridViewModel(
         )
 
     private val _raffle = MutableStateFlow<Raffle?>(null)
-    val raffle: StateFlow<Raffle?> = _raffle
+    val raffle: StateFlow<Raffle?> = _raffle.asStateFlow()
 
     private val _lastTransaction = MutableStateFlow<List<Ticket>?>(null)
-    val lastTransaction: StateFlow<List<Ticket>?> = _lastTransaction
+    val lastTransaction: StateFlow<List<Ticket>?> = _lastTransaction.asStateFlow()
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     init {
         viewModelScope.launch {
             _raffle.value = repository.getRaffleById(raffleId)
-        }
-    }
-
-    fun sellOrReserve(
-        ticket: Ticket,
-        buyerName: String,
-        buyerPhone: String?,
-        status: TicketStatus
-    ) {
-        viewModelScope.launch {
-            val updated = repository.sellOrReserveTicket(ticket, buyerName, buyerPhone, status)
-            _lastTransaction.value = listOf(updated)
         }
     }
 
@@ -56,13 +48,24 @@ class TicketGridViewModel(
         status: TicketStatus
     ) {
         viewModelScope.launch {
-            val updated = repository.sellOrReserveGroup(tickets, buyerName, buyerPhone, status)
-            _lastTransaction.value = updated
+            repository.sellOrReserveGroup(tickets, buyerName, buyerPhone, status)
+                .onSuccess { updated ->
+                    _lastTransaction.value = updated
+                    _errorMessage.value = null
+                }
+                .onFailure { exception ->
+                    _errorMessage.value = exception.message
+                }
         }
     }
 
-    fun clearLastTransaction() {
-        _lastTransaction.value = null
+    fun changeStatus(ticket: Ticket, newStatus: TicketStatus) {
+        viewModelScope.launch {
+            repository.changeTicketStatus(ticket, newStatus)
+                .onFailure { exception ->
+                    _errorMessage.value = exception.message
+                }
+        }
     }
 
     fun cancel(ticket: Ticket) {
@@ -71,12 +74,8 @@ class TicketGridViewModel(
         }
     }
 
-    fun changeStatus(ticket: Ticket, newStatus: TicketStatus) {
-        viewModelScope.launch {
-            repository.changeTicketStatus(ticket, newStatus)
-        }
-    }
-
+    fun clearError() { _errorMessage.value = null }
+    fun clearLastTransaction() { _lastTransaction.value = null }
 
     class Factory(
         private val repository: RaffleRepository,
@@ -87,11 +86,4 @@ class TicketGridViewModel(
             return TicketGridViewModel(repository, raffleId) as T
         }
     }
-
-    fun editPhone(ticket: Ticket, newPhone: String?) {
-        viewModelScope.launch {
-            repository.updateBuyerPhone(listOf(ticket), newPhone)
-        }
-    }
-
 }

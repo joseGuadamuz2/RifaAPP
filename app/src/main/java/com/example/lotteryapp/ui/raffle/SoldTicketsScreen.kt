@@ -1,40 +1,22 @@
 package com.example.lotteryapp.ui.raffle
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.TicketStatus
@@ -48,231 +30,322 @@ fun SoldTicketsScreen(
 ) {
     val query by viewModel.searchQuery.collectAsState()
     val entries by viewModel.entries.collectAsState()
+    val buyers by viewModel.buyers.collectAsState()
     val raffle by viewModel.raffle.collectAsState()
+    
+    var selectedTab by remember { mutableIntStateOf(0) }
     var entryToCancel by remember { mutableStateOf<SaleEntry?>(null) }
     var entryToEditPhone by remember { mutableStateOf<SaleEntry?>(null) }
     var entryToToggleStatus by remember { mutableStateOf<SaleEntry?>(null) }
     var statusFilter by remember { mutableStateOf<TicketStatus?>(null) }
+    
     val context = LocalContext.current
+
+    // Cálculos SaaS para Dashboard y Reporte
+    val totalRecaudado = entries.filter { it.status == TicketStatus.SOLD }.sumOf { it.tickets.size * (raffle?.ticketPrice ?: 0.0) }
+    val boletosVendidos = entries.filter { it.status == TicketStatus.SOLD }.sumOf { it.tickets.size }
+    val boletosPendientes = entries.filter { it.status == TicketStatus.RESERVED }.sumOf { it.tickets.size }
+    val montoPendiente = entries.filter { it.status == TicketStatus.RESERVED }.sumOf { it.tickets.size * (raffle?.ticketPrice ?: 0.0) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Registro de ventas") },
+                title = { Text("Administrador SaaS", fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        val report = buildString {
+                            appendLine("📊 REPORTE SaaS: ${raffle?.name?.uppercase()}")
+                            appendLine("━━━━━━━━━━━━━━━━")
+                            appendLine("💰 RECAUDADO: ₡${totalRecaudado.toInt()}")
+                            appendLine("⏳ POR COBRAR: ₡${montoPendiente.toInt()}")
+                            appendLine("🎟️ PAGADOS: $boletosVendidos")
+                            appendLine("🎟️ PENDIENTES: $boletosPendientes")
+                            appendLine("━━━━━━━━━━━━━━━━")
+                            appendLine("\nDETALLE DE CLIENTES:")
+                            buyers.forEach { buyer ->
+                                val status = if (buyer.totalPending > 0) "⏳" else "✅"
+                                appendLine("$status ${buyer.name}: ${buyer.allNumbers.joinToString(", ")}")
+                            }
+                        }
+                        val sendIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, report)
+                            type = "text/plain"
+                        }
+                        context.startActivity(Intent.createChooser(sendIntent, "Exportar Reporte"))
+                    }) {
+                        Icon(Icons.Default.IosShare, contentDescription = "Exportar")
                     }
                 }
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = viewModel::onSearchQueryChange,
-                label = { Text("Buscar por nombre o número") },
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            
+            // DASHBOARD SaaS
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
                 modifier = Modifier.fillMaxWidth()
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(
-                    selected = statusFilter == null,
-                    onClick = { statusFilter = null },
-                    label = { Text("Todos") }
-                )
-                FilterChip(
-                    selected = statusFilter == TicketStatus.SOLD,
-                    onClick = { statusFilter = TicketStatus.SOLD },
-                    label = { Text("Vendidos") }
-                )
-                FilterChip(
-                    selected = statusFilter == TicketStatus.RESERVED,
-                    onClick = { statusFilter = TicketStatus.RESERVED },
-                    label = { Text("Apartados") }
-                )
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SummaryStat(label = "Recaudado", value = "₡${totalRecaudado.toInt()}", icon = Icons.Default.Payments, color = Color(0xFF2E7D32))
+                    SummaryStat(label = "Por Cobrar", value = "₡${montoPendiente.toInt()}", icon = Icons.Default.PendingActions, color = Color(0xFFD32F2F))
+                    SummaryStat(label = "Boletos", value = "$boletosVendidos/100", icon = Icons.Default.ConfirmationNumber, color = MaterialTheme.colorScheme.primary)
+                }
             }
 
-            val filteredEntries = statusFilter?.let { filter ->
-                entries.filter { it.status == filter }
-            } ?: entries
+            TabRow(selectedTabIndex = selectedTab) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Ventas", fontWeight = FontWeight.Bold) })
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Directorio", fontWeight = FontWeight.Bold) })
+            }
 
-            if (filteredEntries.isEmpty()) {
-                Text(
-                    text = "No hay ventas registradas todavía.",
-                    modifier = Modifier.padding(top = 24.dp)
+            Column(modifier = Modifier.padding(16.dp)) {
+                // BUSCADOR SaaS
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = viewModel::onSearchQueryChange,
+                    placeholder = { Text("Buscar cliente, número o teléfono...") },
+                    leadingIcon = { Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.primary) },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) { Icon(Icons.Default.Close, null) }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    )
                 )
-            } else {
-                LazyColumn {
-                    items(filteredEntries, key = { it.groupId ?: it.tickets.first().id }) { entry ->
-                        val currentRaffle = raffle
-                        SaleEntryCard(
-                            entry = entry,
-                            onToggleStatus = { entryToToggleStatus = entry },
-                            onResend = {
-                                if (currentRaffle != null) {
-                                    WhatsAppSender.sendTextReceipt(context, currentRaffle, entry.tickets)
-                                }
-                            },
-                            onCancel = { entryToCancel = entry },
-                            onEditPhone = { entryToEditPhone = entry }
-                        )
-                    }
+
+                if (selectedTab == 0) {
+                    SalesView(
+                        entries = entries,
+                        statusFilter = statusFilter,
+                        onFilterChange = { statusFilter = it },
+                        onToggleStatus = { entryToToggleStatus = it },
+                        onEditPhone = { entryToEditPhone = it },
+                        onCancel = { entryToCancel = it },
+                        viewModel = viewModel,
+                        raffle = raffle
+                    )
+                } else {
+                    DirectoryView(buyers = buyers, raffle = raffle)
                 }
             }
         }
     }
 
+    // DIÁLOGOS
     entryToToggleStatus?.let { entry ->
         val isSold = entry.status == TicketStatus.SOLD
-        val newStatusLabel = if (isSold) "Apartado" else "Vendido"
-        val actionLabel = if (isSold) "Marcar como apartado" else "Confirmar venta"
-
         AlertDialog(
             onDismissRequest = { entryToToggleStatus = null },
-            title = { Text("Cambiar estado") },
-            text = {
-                Text("¿Deseas cambiar el estado de los boletos ${entry.numbers.joinToString(", ")} a $newStatusLabel?")
-            },
+            title = { Text("Confirmar Pago") },
+            text = { Text("¿Marcar los boletos ${entry.numbers.joinToString(", ")} de ${entry.buyerName} como ${if (isSold) "Pendientes" else "Pagados"}?") },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.toggleStatus(entry)
-                    entryToToggleStatus = null
-                }) {
-                    Text(actionLabel)
-                }
+                Button(onClick = { viewModel.toggleStatus(entry); entryToToggleStatus = null }) { Text("Confirmar") }
             },
-            dismissButton = {
-                TextButton(onClick = { entryToToggleStatus = null }) {
-                    Text("Cancelar")
-                }
-            }
+            dismissButton = { TextButton(onClick = { entryToToggleStatus = null }) { Text("Cancelar") } }
         )
     }
 
     entryToCancel?.let { entry ->
         AlertDialog(
             onDismissRequest = { entryToCancel = null },
-            title = { Text("Cancelar venta") },
-            text = {
-                val label = if (entry.tickets.size > 1) "los boletos" else "el boleto"
-                Text("¿Seguro que querés cancelar $label ${entry.numbers.joinToString(", ")}? Volverán a estar disponibles.")
-            },
+            title = { Text("Borrar Registro", color = MaterialTheme.colorScheme.error) },
+            text = { Text("Los números ${entry.numbers.joinToString(", ")} se liberarán. Esta acción no se puede deshacer.") },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.cancelEntry(entry)
-                    entryToCancel = null
-                }) {
-                    Text("Cancelar venta")
-                }
+                Button(onClick = { viewModel.cancelEntry(entry); entryToCancel = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Eliminar") }
             },
-            dismissButton = {
-                TextButton(onClick = { entryToCancel = null }) {
-                    Text("Volver")
-                }
-            }
+            dismissButton = { TextButton(onClick = { entryToCancel = null }) { Text("Volver") } }
         )
     }
 
     entryToEditPhone?.let { entry ->
-        EditPhoneDialog(
-            currentPhone = entry.buyerPhone,
-            onDismiss = { entryToEditPhone = null },
-            onConfirm = { newPhone ->
-                viewModel.editPhone(entry, newPhone)
-                entryToEditPhone = null
-            }
-        )
+        EditPhoneDialog(currentPhone = entry.buyerPhone, onDismiss = { entryToEditPhone = null }, onConfirm = { newPhone -> viewModel.editPhone(entry, newPhone); entryToEditPhone = null })
     }
 }
 
 @Composable
-private fun SaleEntryCard(
+private fun SalesView(
+    entries: List<SaleEntry>,
+    statusFilter: TicketStatus?,
+    onFilterChange: (TicketStatus?) -> Unit,
+    onToggleStatus: (SaleEntry) -> Unit,
+    onEditPhone: (SaleEntry) -> Unit,
+    onCancel: (SaleEntry) -> Unit,
+    viewModel: SoldTicketsViewModel,
+    raffle: com.example.lotteryapp.data.entity.Raffle?
+) {
+    val context = LocalContext.current
+    val filtered = remember(entries, statusFilter) {
+        statusFilter?.let { filter -> entries.filter { it.status == filter } } ?: entries
+    }
+
+    Column {
+        Row(modifier = Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = statusFilter == null, onClick = { onFilterChange(null) }, label = { Text("Todos") })
+            FilterChip(selected = statusFilter == TicketStatus.SOLD, onClick = { onFilterChange(TicketStatus.SOLD) }, label = { Text("Pagados") })
+            FilterChip(selected = statusFilter == TicketStatus.RESERVED, onClick = { onFilterChange(TicketStatus.RESERVED) }, label = { Text("Pendientes") })
+        }
+
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 100.dp)) {
+            items(filtered) { entry ->
+                SaleEntryCardSaaS(
+                    entry = entry,
+                    onToggleStatus = { onToggleStatus(entry) },
+                    onResend = { raffle?.let { WhatsAppSender.sendTextReceipt(context, it, entry.tickets) } },
+                    onSendReminder = {
+                        val msg = viewModel.getReminderMessage(entry)
+                        WhatsAppSender.sendCustomMessage(context, entry.buyerPhone, msg)
+                    },
+                    onCancel = { onCancel(entry) },
+                    onEditPhone = { onEditPhone(entry) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DirectoryView(
+    buyers: List<BuyerSummary>,
+    raffle: com.example.lotteryapp.data.entity.Raffle?
+) {
+    val context = LocalContext.current
+    if (buyers.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin clientes registrados.", color = Color.Gray) }
+    } else {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 100.dp)) {
+            items(buyers) { buyer ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape, modifier = Modifier.size(44.dp)) {
+                                Icon(Icons.Default.Person, null, modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(buyer.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                Text("${buyer.tickets.size} boletos asignados", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            }
+                        }
+                        
+                        Spacer(Modifier.height(12.dp))
+                        Text("Números: ${buyer.allNumbers.joinToString(", ")}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp)
+                        
+                        HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                        
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column {
+                                Text("Total Invertido", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text("₡${(buyer.totalPaid + buyer.totalPending).toInt()}", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                            }
+                            if (buyer.totalPending > 0) {
+                                Button(
+                                    onClick = {
+                                        val msg = "Hola ${buyer.name}, tienes un saldo pendiente de ₡${buyer.totalPending.toInt()} en la Rifa ${raffle?.name}. ¡Gracias!"
+                                        WhatsAppSender.sendCustomMessage(context, buyer.phone, msg)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.height(40.dp)
+                                ) {
+                                    Icon(Icons.Default.NotificationsActive, null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Recordar Pago", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                AssistChip(onClick = {}, label = { Text("AL DÍA", fontWeight = FontWeight.Bold) }, leadingIcon = { Icon(Icons.Default.Verified, null, Modifier.size(18.dp), Color(0xFF2E7D32)) })
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryStat(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, null, modifier = Modifier.size(20.dp), tint = color)
+        Text(text = value, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = color)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+    }
+}
+
+@Composable
+private fun SaleEntryCardSaaS(
     entry: SaleEntry,
     onToggleStatus: () -> Unit,
     onResend: () -> Unit,
+    onSendReminder: () -> Unit,
     onCancel: () -> Unit,
     onEditPhone: () -> Unit
 ) {
-    val statusLabel = if (entry.status == TicketStatus.SOLD) "Vendido" else "Apartado"
-    val toggleLabel = if (entry.status == TicketStatus.SOLD) "Apartar" else "Vender"
+    val isSold = entry.status == TicketStatus.SOLD
     val hasPhone = !entry.buyerPhone.isNullOrBlank()
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column {
-                    Text(
-                        text = "Boletos: ${entry.numbers.joinToString(", ")}",
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(text = entry.buyerName ?: "")
-                    if (hasPhone) {
-                        Text(text = entry.buyerPhone ?: "")
-                    }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = entry.buyerName ?: "Sin Nombre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = "Boletos: ${entry.numbers.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
                 }
-                AssistChip(onClick = {}, label = { Text(statusLabel) })
+                Surface(color = if (isSold) Color(0xFFE8F5E9) else Color(0xFFFFF8E1), shape = RoundedCornerShape(12.dp)) {
+                    Text(text = if (isSold) "PAGADO" else "PENDIENTE", modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = if (isSold) Color(0xFF2E7D32) else Color(0xFFF57F17), fontWeight = FontWeight.ExtraBold)
+                }
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                val buttonPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                val fontSize = 11.sp
+            Spacer(Modifier.height(16.dp))
 
-                if (hasPhone) {
-                    FilledTonalButton(
-                        onClick = onResend,
-                        modifier = Modifier.weight(1f),
-                        contentPadding = buttonPadding
-                    ) {
-                        Text("Reenviar", fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!isSold && hasPhone) {
+                    Button(onClick = onSendReminder, modifier = Modifier.weight(1.5f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)), shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(0.dp)) {
+                        Icon(Icons.Default.NotificationsActive, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Cobrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                } else if (isSold && hasPhone) {
+                    FilledTonalButton(onClick = onResend, modifier = Modifier.weight(1.5f), shape = RoundedCornerShape(12.dp)) {
+                        Icon(Icons.Default.Share, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Recibo", fontSize = 11.sp)
                     }
                 }
 
-                FilledTonalButton(
-                    onClick = onToggleStatus,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = buttonPadding
-                ) {
-                    Text(toggleLabel, fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                IconButton(onClick = onToggleStatus, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)) {
+                    Icon(if (isSold) Icons.Default.SyncAlt else Icons.Default.CheckCircle, null, tint = if (isSold) Color.Gray else Color(0xFF2E7D32))
                 }
-
-                FilledTonalButton(
-                    onClick = onEditPhone,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = buttonPadding
-                ) {
-                    Text("Editar", fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                IconButton(onClick = onEditPhone, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)) {
+                    Icon(Icons.Default.Phone, null, modifier = Modifier.size(18.dp))
                 }
-
-                FilledTonalButton(
-                    onClick = onCancel,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = buttonPadding
-                ) {
-                    Text("Borrar", fontSize = fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                IconButton(onClick = onCancel, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)) {
+                    Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -280,32 +353,15 @@ private fun SaleEntryCard(
 }
 
 @Composable
-private fun EditPhoneDialog(
-    currentPhone: String?,
-    onDismiss: () -> Unit,
-    onConfirm: (String?) -> Unit
-) {
+private fun EditPhoneDialog(currentPhone: String?, onDismiss: () -> Unit, onConfirm: (String?) -> Unit) {
     var phone by remember { mutableStateOf(currentPhone ?: "") }
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Editar teléfono") },
+        title = { Text("Actualizar Contacto") },
         text = {
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
-                label = { Text("Teléfono (opcional)") }
-            )
+            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("WhatsApp (8 dígitos)") }, placeholder = { Text("Ej: 88888888") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
         },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(phone.ifBlank { null }) }) {
-                Text("Guardar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
+        confirmButton = { Button(onClick = { onConfirm(phone.ifBlank { null }) }) { Text("Guardar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
 }
