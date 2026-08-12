@@ -34,6 +34,25 @@ class HomeViewModel(
     private val _selectedTab = MutableStateFlow(0) // 0: Activas, 1: Finalizadas
     val selectedTab: StateFlow<Int> = _selectedTab
 
+    init {
+        checkAndCloseExpiredRaffles()
+    }
+
+    private fun checkAndCloseExpiredRaffles() {
+        viewModelScope.launch {
+            try {
+                val now = System.currentTimeMillis()
+                // Buscamos rifas activas que ya pasaron su fecha
+                val activeRaffles = repository.getRafflesByStatus(RaffleStatus.ACTIVE, "").first()
+                activeRaffles.forEach { raffle ->
+                    if (raffle.drawDate < now) {
+                        repository.updateRaffle(raffle.copy(status = RaffleStatus.CLOSED))
+                    }
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
     val raffleItems: StateFlow<List<RaffleItem>> = combine(_searchQuery, _selectedTab) { query: String, tab: Int ->
         val status = if (tab == 0) RaffleStatus.ACTIVE else RaffleStatus.CLOSED
         repository.getRafflesByStatus(status, query)

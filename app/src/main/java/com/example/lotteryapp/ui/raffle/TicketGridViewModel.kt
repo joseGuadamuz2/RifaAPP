@@ -70,19 +70,34 @@ class TicketGridViewModel(
 
     fun cancel(ticket: Ticket) {
         viewModelScope.launch {
-            repository.cancelTicket(ticket)
+            try {
+                repository.cancelTicket(ticket)
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al liberar ticket: ${e.message}"
+            }
         }
     }
 
     fun cancelGroup(group: List<Ticket>) {
         viewModelScope.launch {
-            repository.cancelTickets(group)
+            try {
+                repository.cancelTickets(group)
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al liberar grupo: ${e.message}"
+            }
         }
     }
 
     fun changeTicketsStatus(tickets: List<Ticket>, newStatus: TicketStatus) {
         viewModelScope.launch {
-            repository.changeTicketsStatus(tickets, newStatus)
+            try {
+                repository.changeTicketsStatus(tickets, newStatus)
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al cambiar estado: ${e.message}"
+            }
         }
     }
 

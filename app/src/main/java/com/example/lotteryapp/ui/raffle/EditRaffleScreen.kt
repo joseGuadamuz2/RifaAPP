@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -43,6 +44,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.RaffleModality
@@ -100,7 +104,16 @@ fun EditRaffleScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let {
+            snackbarHostState.showSnackbar(it, withDismissAction = true)
+            viewModel.clearError()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Editar rifa", fontWeight = FontWeight.Bold) },
@@ -178,20 +191,22 @@ fun EditRaffleScreen(
 
                 OutlinedTextField(
                     value = uiState.name,
-                    onValueChange = viewModel::onNameChange,
+                    onValueChange = { if (it.all { c -> c.isLetterOrDigit() || c.isWhitespace() }) viewModel.onNameChange(it) },
                     label = { Text("Nombre de la rifa") },
                     placeholder = { Text("Ej: Rifa Navideña") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
                 )
 
                 OutlinedTextField(
                     value = uiState.prizeName,
-                    onValueChange = viewModel::onPrizeNameChange,
+                    onValueChange = { if (it.all { c -> c.isLetterOrDigit() || c.isWhitespace() }) viewModel.onPrizeNameChange(it) },
                     label = { Text("¿Qué se rifa?") },
                     placeholder = { Text("Ej: Canasta de víveres") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
                 )
             }
 
@@ -207,11 +222,13 @@ fun EditRaffleScreen(
 
                 OutlinedTextField(
                     value = uiState.ticketPrice,
-                    onValueChange = viewModel::onTicketPriceChange,
+                    onValueChange = { if (it.all { c -> c.isDigit() }) viewModel.onTicketPriceChange(it) },
                     label = { Text(if (uiState.modality == RaffleModality.GROUPS) "Precio por grupo" else "Precio por boleto") },
                     prefix = { Text("₡ ", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
                 )
 
                 // Fecha con mejor UX

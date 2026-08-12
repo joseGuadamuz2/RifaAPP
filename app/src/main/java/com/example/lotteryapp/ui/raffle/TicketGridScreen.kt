@@ -436,7 +436,14 @@ private fun QuickSellDialog(
                     }
                 } else {
                     Text("Procesando como: ${if(selectedStatus == TicketStatus.SOLD) "VENTA" else "APARTADO"}", fontWeight = FontWeight.Bold, color = if(selectedStatus == TicketStatus.SOLD) TicketSoldBg else Color(0xFF7B5E00))
-                    OutlinedTextField(value = buyerName, onValueChange = { buyerName = it }, label = { Text("Nombre del cliente") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
+                    OutlinedTextField(
+                        value = buyerName,
+                        onValueChange = { if (it.all { c -> c.isLetterOrDigit() || c.isWhitespace() }) buyerName = it },
+                        label = { Text("Nombre del cliente") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
                     PhoneFieldWithContacts(
                         value = buyerPhone,
                         onValueChange = { buyerPhone = it },
@@ -518,7 +525,14 @@ private fun GroupSellDialog(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    OutlinedTextField(value = buyerName, onValueChange = { buyerName = it }, label = { Text("Nombre del cliente") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
+                    OutlinedTextField(
+                        value = buyerName,
+                        onValueChange = { if (it.all { c -> c.isLetterOrDigit() || c.isWhitespace() }) buyerName = it },
+                        label = { Text("Nombre del cliente") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
                     PhoneFieldWithContacts(
                         value = buyerPhone,
                         onValueChange = { buyerPhone = it },

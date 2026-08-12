@@ -41,6 +41,7 @@ fun SoldTicketsScreen(
     val entries by viewModel.entries.collectAsState()
     val buyers by viewModel.buyers.collectAsState()
     val raffle by viewModel.raffle.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
     
     var selectedTab by remember { mutableIntStateOf(0) }
     var entryToCancel by remember { mutableStateOf<SaleEntry?>(null) }
@@ -49,6 +50,15 @@ fun SoldTicketsScreen(
     var statusFilter by remember { mutableStateOf<TicketStatus?>(null) }
     
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it, withDismissAction = true)
+            viewModel.clearError()
+        }
+    }
+
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale("es", "CR")).apply {
         maximumFractionDigits = 0
     }
@@ -64,6 +74,7 @@ fun SoldTicketsScreen(
     val montoPendiente = entries.filter { it.status == TicketStatus.RESERVED }.sumOf { unitsFor(it) * (raffle?.ticketPrice ?: 0.0) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
                 TopAppBar(

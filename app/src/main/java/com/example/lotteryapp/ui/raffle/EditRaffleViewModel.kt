@@ -22,8 +22,20 @@ data class EditRaffleUiState(
     val drawDate: Long? = null,
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
-    val saveSuccess: Boolean = false
-)
+    val saveSuccess: Boolean = false,
+    val errorMessage: String? = null
+) {
+    val isFormValid: Boolean
+        get() {
+            val price = ticketPrice.toDoubleOrNull() ?: 0.0
+            val today = System.currentTimeMillis()
+            val startOfToday = today - (today % (24 * 60 * 60 * 1000))
+            
+            return name.isNotBlank() && prizeName.isNotBlank() &&
+                    price in 5.0..1000000.0 && 
+                    drawDate != null && drawDate >= startOfToday
+        }
+}
 
 class EditRaffleViewModel(
     private val repository: RaffleRepository,
@@ -76,30 +88,42 @@ class EditRaffleViewModel(
         _uiState.value = _uiState.value.copy(drawDate = value)
     }
 
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
     fun saveChanges() {
         val state = _uiState.value
         val price = state.ticketPrice.toDoubleOrNull()
         val date = state.drawDate
 
-        if (state.name.isBlank() || state.prizeName.isBlank() || price == null || date == null) {
+        if (!state.isFormValid || price == null || date == null) {
+            _uiState.value = state.copy(errorMessage = "Por favor verifica los datos. El precio debe estar entre ₡5 y ₡1,000,000 y la fecha no puede ser anterior a hoy.")
             return
         }
 
-        _uiState.value = state.copy(isSaving = true)
+        _uiState.value = state.copy(isSaving = true, errorMessage = null)
 
         viewModelScope.launch {
-            val existing = repository.getRaffleById(raffleId) ?: return@launch
-            repository.updateRaffle(
-                existing.copy(
-                    name = state.name,
-                    prizeName = state.prizeName,
-                    prizePhotoPath = state.prizePhotoPath,
-                    ticketPrice = price,
-                    drawDate = date,
-                    source = state.source
+            try {
+                val existing = repository.getRaffleById(raffleId) ?: return@launch
+                repository.updateRaffle(
+                    existing.copy(
+                        name = state.name.trim(),
+                        prizeName = state.prizeName.trim(),
+                        prizePhotoPath = state.prizePhotoPath,
+                        ticketPrice = price,
+                        drawDate = date,
+                        source = state.source
+                    )
                 )
-            )
-            _uiState.value = _uiState.value.copy(isSaving = false, saveSuccess = true)
+                _uiState.value = _uiState.value.copy(isSaving = false, saveSuccess = true)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    errorMessage = "Error al actualizar la rifa: ${e.message}"
+                )
+            }
         }
     }
 

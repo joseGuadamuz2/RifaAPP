@@ -42,6 +42,9 @@ class SoldTicketsViewModel(
     private val _raffle = MutableStateFlow<Raffle?>(null)
     val raffle: StateFlow<Raffle?> = _raffle
 
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
     init {
         viewModelScope.launch {
             _raffle.value = repository.getRaffleById(raffleId)
@@ -111,16 +114,39 @@ class SoldTicketsViewModel(
 
     fun toggleStatus(entry: SaleEntry) {
         val newStatus = if (entry.status == TicketStatus.SOLD) TicketStatus.RESERVED else TicketStatus.SOLD
-        viewModelScope.launch { repository.changeTicketsStatus(entry.tickets, newStatus) }
+        viewModelScope.launch {
+            try {
+                repository.changeTicketsStatus(entry.tickets, newStatus)
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al cambiar estado: ${e.message}"
+            }
+        }
     }
 
     fun cancelEntry(entry: SaleEntry) {
-        viewModelScope.launch { repository.cancelTickets(entry.tickets) }
+        viewModelScope.launch {
+            try {
+                repository.cancelTickets(entry.tickets)
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al cancelar venta: ${e.message}"
+            }
+        }
     }
 
     fun editPhone(entry: SaleEntry, newPhone: String?) {
-        viewModelScope.launch { repository.updateBuyerPhone(entry.tickets, newPhone) }
+        viewModelScope.launch {
+            try {
+                repository.updateBuyerPhone(entry.tickets, newPhone)
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al actualizar teléfono: ${e.message}"
+            }
+        }
     }
+
+    fun clearError() { _errorMessage.value = null }
 
     fun getReminderMessage(entry: SaleEntry): String {
         val raffle = _raffle.value

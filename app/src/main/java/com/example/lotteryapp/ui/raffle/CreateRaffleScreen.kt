@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -34,6 +35,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -70,7 +72,16 @@ fun CreateRaffleScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let {
+            snackbarHostState.showSnackbar(it, withDismissAction = true)
+            viewModel.clearError()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Nueva rifa", fontWeight = FontWeight.Bold) },
@@ -159,30 +170,34 @@ fun CreateRaffleScreen(
             // 2. CAMPOS DEL FORMULARIO
             OutlinedTextField(
                 value = uiState.name,
-                onValueChange = viewModel::onNameChange,
+                onValueChange = { if (it.all { c -> c.isLetterOrDigit() || c.isWhitespace() }) viewModel.onNameChange(it) },
                 label = { Text("Nombre de la rifa") },
                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.Label, null) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                singleLine = true
             )
 
             OutlinedTextField(
                 value = uiState.prizeName,
-                onValueChange = viewModel::onPrizeNameChange,
+                onValueChange = { if (it.all { c -> c.isLetterOrDigit() || c.isWhitespace() }) viewModel.onPrizeNameChange(it) },
                 label = { Text("Nombre del premio") },
                 leadingIcon = { Icon(Icons.Filled.EmojiEvents, null) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                singleLine = true
             )
 
             OutlinedTextField(
                 value = uiState.ticketPrice,
-                onValueChange = viewModel::onTicketPriceChange,
+                onValueChange = { if (it.all { c -> c.isDigit() }) viewModel.onTicketPriceChange(it) },
                 label = { Text(if (uiState.modality == RaffleModality.GROUPS) "Precio por grupo" else "Precio por boleto") },
                 prefix = { Text("₡ ") },
                 leadingIcon = { Icon(Icons.Filled.Payments, null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                singleLine = true
             )
 
             // CAMPO DE FECHA REDISEÑADO

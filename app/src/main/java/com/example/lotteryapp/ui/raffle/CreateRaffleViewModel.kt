@@ -25,15 +25,23 @@ data class CreateRaffleUiState(
     val prizePhotoPath: String? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
-    val createdRaffleId: String? = null
+    val createdRaffleId: String? = null,
+    val errorMessage: String? = null
 ) {
     val groupCount: Int
         get() = if (modality == RaffleModality.GROUPS) 100 / groupSize else 0
 
     val isFormValid: Boolean
-        get() = name.isNotBlank() && prizeName.isNotBlank() &&
-                ticketPrice.toDoubleOrNull() != null && drawDate != null &&
-                (modality == RaffleModality.SENCILLA || groupSize in GROUP_SIZE_OPTIONS)
+        get() {
+            val price = ticketPrice.toDoubleOrNull() ?: 0.0
+            val today = System.currentTimeMillis()
+            val startOfToday = today - (today % (24 * 60 * 60 * 1000))
+            
+            return name.isNotBlank() && prizeName.isNotBlank() &&
+                    price in 5.0..1000000.0 && 
+                    drawDate != null && drawDate >= startOfToday &&
+                    (modality == RaffleModality.SENCILLA || groupSize in GROUP_SIZE_OPTIONS)
+        }
 }
 
 class CreateRaffleViewModel(
@@ -75,32 +83,46 @@ class CreateRaffleViewModel(
         _uiState.value = _uiState.value.copy(prizePhotoPath = uri)
     }
 
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
     fun saveRaffle() {
         val state = _uiState.value
         val price = state.ticketPrice.toDoubleOrNull()
         val date = state.drawDate
 
-        if (!state.isFormValid || price == null || date == null) return
+        if (!state.isFormValid || price == null || date == null) {
+            _uiState.value = state.copy(errorMessage = "Por favor verifica los datos. El precio debe estar entre ₡5 y ₡1,000,000 y la fecha no puede ser anterior a hoy.")
+            return
+        }
 
-        _uiState.value = state.copy(isSaving = true)
+        _uiState.value = state.copy(isSaving = true, errorMessage = null)
 
         viewModelScope.launch {
-            val raffle = Raffle(
-                name = state.name,
-                prizeName = state.prizeName,
-                ticketPrice = price,
-                drawDate = date,
-                source = state.source,
-                modality = state.modality,
-                groupSize = state.groupSize,
-                prizePhotoPath = state.prizePhotoPath
-            )
-            repository.createRaffle(raffle)
-            _uiState.value = _uiState.value.copy(
-                isSaving = false,
-                saveSuccess = true,
-                createdRaffleId = raffle.id
-            )
+            try {
+                val raffle = Raffle(
+                    name = state.name.trim(),
+                    prizeName = state.prizeName.trim(),
+                    ticketPrice = price,
+                    drawDate = date,
+                    source = state.source,
+                    modality = state.modality,
+                    groupSize = state.groupSize,
+                    prizePhotoPath = state.prizePhotoPath
+                )
+                repository.createRaffle(raffle)
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    saveSuccess = true,
+                    createdRaffleId = raffle.id
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    errorMessage = "Error al guardar la rifa: ${e.message}"
+                )
+            }
         }
     }
 
