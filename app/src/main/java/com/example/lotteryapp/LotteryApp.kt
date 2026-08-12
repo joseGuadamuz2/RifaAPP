@@ -9,9 +9,11 @@ class LotteryApp : Application() {
     val repository: RaffleRepository by lazy {
         val database = DatabaseProvider.getDatabase(this)
         RaffleRepository(
+            database = database,
             raffleDao = database.raffleDao(),
             ticketDao = database.ticketDao(),
-            cancellationHistoryDao = database.cancellationHistoryDao()
+            cancellationHistoryDao = database.cancellationHistoryDao(),
+            winnerDao = database.winnerDao()
         )
     }
 }

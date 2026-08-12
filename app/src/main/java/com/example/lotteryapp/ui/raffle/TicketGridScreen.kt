@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -59,6 +60,7 @@ fun TicketGridScreen(
     viewModel: TicketGridViewModel,
     onBack: () -> Unit,
     onOpenSoldTickets: () -> Unit,
+    onOpenWinners: () -> Unit,
     onEditRaffle: (String) -> Unit
 ) {
     val tickets by viewModel.tickets.collectAsState()
@@ -109,6 +111,9 @@ fun TicketGridScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onOpenWinners) {
+                        Icon(Icons.Filled.EmojiEvents, contentDescription = "Ganadores")
+                    }
                     if (selectedIds.isNotEmpty()) {
                         TextButton(onClick = { selectedIds = emptySet() }) {
                             Text(
@@ -143,12 +148,12 @@ fun TicketGridScreen(
                     columns = GridCells.Fixed(5),
                     modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
-                    items(groups, key = { group -> group.joinToString(",") { it.id } }) { group ->
+                    itemsIndexed(groups, key = { _, group -> group.joinToString(",") { it.id } }) { index, group ->
                         val gStatus = groupStatusOf(group)
                         val isSelected = group.all { selectedIds.contains(it.id) }
                         GroupCell(
                             group = group,
-                            index = groups.indexOf(group),
+                            index = index,
                             groupCount = groups.size,
                             status = gStatus,
                             isSelected = isSelected,
@@ -280,8 +285,11 @@ fun TicketGridScreen(
                 confirmButton = {
                     if (hasPhone) {
                         Button(onClick = {
-                            WhatsAppSender.sendTextReceipt(context, currentRaffle, transaction)
+                            val launched = WhatsAppSender.sendTextReceipt(context, currentRaffle, transaction)
                             viewModel.clearLastTransaction()
+                            if (!launched) {
+                                scope.launch { snackbarHostState.showSnackbar("WhatsApp no está instalado") }
+                            }
                         }) { Text("Enviar WhatsApp") }
                     }
                 },
@@ -568,7 +576,7 @@ private fun RaffleHeaderSaaS(raffle: Raffle, onEditClick: () -> Unit, onOpenSold
         RaffleSource.LOTERIA_NACIONAL -> "Nal."
         RaffleSource.CHANCES -> "Chances"
         RaffleSource.SORTEO -> "Especial"
-        RaffleSource.MANUAl -> "Manual"
+        RaffleSource.MANUAL -> "Manual"
         RaffleSource.OTRO -> "Otro"
     }
 

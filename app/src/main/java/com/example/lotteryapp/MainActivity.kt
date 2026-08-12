@@ -24,6 +24,8 @@ import com.example.lotteryapp.ui.raffle.SoldTicketsViewModel
 import com.example.lotteryapp.ui.raffle.TicketGridScreen
 import com.example.lotteryapp.ui.raffle.TicketGridViewModel
 import com.example.lotteryapp.ui.theme.LotteryAppTheme
+import com.example.lotteryapp.ui.winners.WinnersScreen
+import com.example.lotteryapp.ui.winners.WinnersViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +47,7 @@ class MainActivity : ComponentActivity() {
                                 onCreateRaffle = { navController.navigate("createRaffle") },
                                 onOpenRaffle = { raffleId -> navController.navigate("ticketGrid/$raffleId") },
                                 onOpenSoldTickets = { raffleId -> navController.navigate("soldTickets/$raffleId") },
+                                onOpenWinners = { raffleId -> navController.navigate("winners/$raffleId") },
                                 onEditRaffle = { raffleId -> navController.navigate("editRaffle/$raffleId") }
                             )
                         }
@@ -91,7 +94,22 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 onBack = { navController.popBackStack() },
                                 onOpenSoldTickets = { navController.navigate("soldTickets/$raffleId") },
+                                onOpenWinners = { navController.navigate("winners/$raffleId") },
                                 onEditRaffle = { id -> navController.navigate("editRaffle/$id") }
+                            )
+                        }
+
+                        composable(
+                            route = "winners/{raffleId}",
+                            arguments = listOf(navArgument("raffleId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val raffleId = backStackEntry.arguments?.getString("raffleId") ?: return@composable
+                            val viewModel: WinnersViewModel = viewModel(
+                                factory = WinnersViewModel.Factory(repository, raffleId)
+                            )
+                            WinnersScreen(
+                                viewModel = viewModel,
+                                onBack = { navController.popBackStack() }
                             )
                         }
 

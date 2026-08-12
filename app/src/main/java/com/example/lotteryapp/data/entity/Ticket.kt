@@ -22,7 +22,7 @@ enum class TicketStatus {
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("raffleId")]
+    indices = [Index("raffleId"), Index("groupId")]
 )
 data class Ticket(
     @PrimaryKey
@@ -32,6 +32,5 @@ data class Ticket(
     val buyerName: String? = null,
     val buyerPhone: String? = null,
     val status: TicketStatus = TicketStatus.AVAILABLE,
-    val imageSent: Boolean = false,
     val groupId: String? = null
 )

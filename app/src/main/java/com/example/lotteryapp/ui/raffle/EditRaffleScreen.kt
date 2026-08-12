@@ -47,6 +47,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -68,8 +69,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleSource
+import com.example.lotteryapp.util.DateUtils
 import com.example.lotteryapp.util.ImageSharingHelper
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -93,6 +96,12 @@ fun EditRaffleScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale("es", "CR")) }
     val scrollState = rememberScrollState()
+
+    val drawDate = uiState.drawDate
+    val dateError = drawDate != null && !DateUtils.isSameDayOrAfter(drawDate)
+    val priceValue = uiState.ticketPrice.toDoubleOrNull()
+    val priceError = uiState.ticketPrice.isNotEmpty() &&
+            (priceValue == null || priceValue < 5.0 || priceValue > 1000000.0)
 
     val context = LocalContext.current
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -226,6 +235,10 @@ fun EditRaffleScreen(
                     label = { Text(if (uiState.modality == RaffleModality.GROUPS) "Precio por grupo" else "Precio por boleto") },
                     prefix = { Text("₡ ", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = priceError,
+                    supportingText = if (priceError) {
+                        { Text("El precio debe estar entre ₡5 y ₡1,000,000", color = MaterialTheme.colorScheme.error) }
+                    } else null,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
@@ -239,6 +252,10 @@ fun EditRaffleScreen(
                         readOnly = true,
                         label = { Text("Fecha del sorteo") },
                         trailingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
+                        isError = dateError,
+                        supportingText = if (dateError) {
+                            { Text("No puedes seleccionar una fecha menor a la fecha actual", color = MaterialTheme.colorScheme.error) }
+                        } else null,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -259,7 +276,7 @@ fun EditRaffleScreen(
                     onExpandedChange = { sourceMenuExpanded = it }
                 ) {
                     OutlinedTextField(
-                        value = if (uiState.source == RaffleSource.LOTERIA_NACIONAL) "Lotería Nacional" else "Chances",
+                        value = uiState.source.displayName,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Sorteo de referencia") },
@@ -274,20 +291,15 @@ fun EditRaffleScreen(
                         onDismissRequest = { sourceMenuExpanded = false },
                         modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Lotería Nacional") },
-                            onClick = {
-                                viewModel.onSourceChange(RaffleSource.LOTERIA_NACIONAL)
-                                sourceMenuExpanded = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Chances") },
-                            onClick = {
-                                viewModel.onSourceChange(RaffleSource.CHANCES)
-                                sourceMenuExpanded = false
-                            }
-                        )
+                        RaffleSource.entries.filter { it != RaffleSource.OTRO }.forEach { source ->
+                            DropdownMenuItem(
+                                text = { Text(source.displayName) },
+                                onClick = {
+                                    viewModel.onSourceChange(source)
+                                    sourceMenuExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
 
@@ -326,7 +338,7 @@ fun EditRaffleScreen(
             // Botón de acción principal
             Button(
                 onClick = viewModel::saveChanges,
-                enabled = !uiState.isSaving,
+                enabled = uiState.isFormValid && !uiState.isSaving,
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -342,7 +354,19 @@ fun EditRaffleScreen(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = uiState.drawDate)
+        val selectableDates = remember {
+            object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    DateUtils.isSameDayOrAfter(utcTimeMillis)
+
+                override fun isSelectableYear(year: Int): Boolean =
+                    year >= Calendar.getInstance().get(Calendar.YEAR)
+            }
+        }
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = uiState.drawDate,
+            selectableDates = selectableDates
+        )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {

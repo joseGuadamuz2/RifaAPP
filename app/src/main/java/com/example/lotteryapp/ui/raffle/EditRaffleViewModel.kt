@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleSource
+import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.repository.RaffleRepository
+import com.example.lotteryapp.util.DateUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,12 +30,10 @@ data class EditRaffleUiState(
     val isFormValid: Boolean
         get() {
             val price = ticketPrice.toDoubleOrNull() ?: 0.0
-            val today = System.currentTimeMillis()
-            val startOfToday = today - (today % (24 * 60 * 60 * 1000))
-            
+
             return name.isNotBlank() && prizeName.isNotBlank() &&
-                    price in 5.0..1000000.0 && 
-                    drawDate != null && drawDate >= startOfToday
+                    price in 5.0..1000000.0 &&
+                    drawDate != null && DateUtils.isSameDayOrAfter(drawDate)
         }
 }
 
@@ -107,6 +107,13 @@ class EditRaffleViewModel(
         viewModelScope.launch {
             try {
                 val existing = repository.getRaffleById(raffleId) ?: return@launch
+                // Si se cambia la fecha de una rifa cerrada, se reabre (ACTIVA)
+                val dateChanged = existing.drawDate != date
+                val newStatus = if (existing.status == RaffleStatus.CLOSED && dateChanged) {
+                    RaffleStatus.ACTIVE
+                } else {
+                    existing.status
+                }
                 repository.updateRaffle(
                     existing.copy(
                         name = state.name.trim(),
@@ -114,7 +121,8 @@ class EditRaffleViewModel(
                         prizePhotoPath = state.prizePhotoPath,
                         ticketPrice = price,
                         drawDate = date,
-                        source = state.source
+                        source = state.source,
+                        status = newStatus
                     )
                 )
                 _uiState.value = _uiState.value.copy(isSaving = false, saveSuccess = true)

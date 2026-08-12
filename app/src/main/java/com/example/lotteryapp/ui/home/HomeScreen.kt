@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.MonetizationOn
@@ -87,6 +88,7 @@ fun HomeScreen(
     onCreateRaffle: () -> Unit,
     onOpenRaffle: (String) -> Unit,
     onOpenSoldTickets: (String) -> Unit,
+    onOpenWinners: (String) -> Unit,
     onEditRaffle: (String) -> Unit
 ) {
     val raffleItems by viewModel.raffleItems.collectAsState()
@@ -176,7 +178,7 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(raffleItems, key = { it.raffle.id }) { item ->
@@ -185,6 +187,7 @@ fun HomeScreen(
                         onClick = { onOpenRaffle(item.raffle.id) },
                         onSell = { onOpenRaffle(item.raffle.id) },
                         onOpenSoldTickets = { onOpenSoldTickets(item.raffle.id) },
+                        onOpenWinners = { onOpenWinners(item.raffle.id) },
                         onShare = { viewModel.shareAvailableNumbers(context, item.raffle) },
                         onEdit = { onEditRaffle(item.raffle.id) },
                         onDelete = { raffleToDelete = item.raffle }
@@ -225,6 +228,7 @@ private fun RaffleCard(
     onClick: () -> Unit,
     onSell: () -> Unit,
     onOpenSoldTickets: () -> Unit,
+    onOpenWinners: () -> Unit,
     onShare: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -350,16 +354,29 @@ private fun RaffleCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = onSell,
-                    modifier = Modifier.weight(1f).height(38.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    enabled = !isClosed,
-                    contentPadding = PaddingValues(horizontal = 8.dp)
-                ) {
-                    Icon(Icons.Filled.Payments, null, Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("VENDER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                if (isClosed) {
+                    Button(
+                        onClick = onOpenWinners,
+                        modifier = Modifier.weight(1f).height(38.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Icon(Icons.Filled.EmojiEvents, null, Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("GANADORES", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                } else {
+                    Button(
+                        onClick = onSell,
+                        modifier = Modifier.weight(1f).height(38.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        enabled = !isClosed,
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Icon(Icons.Filled.Payments, null, Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("VENDER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
                 }
                 FilledTonalButton(
                     onClick = onOpenSoldTickets,

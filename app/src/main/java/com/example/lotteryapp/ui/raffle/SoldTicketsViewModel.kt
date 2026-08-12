@@ -8,6 +8,7 @@ import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.repository.RaffleRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -31,6 +32,7 @@ data class BuyerSummary(
     val allNumbers: List<String> get() = tickets.map { it.number }.sorted()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SoldTicketsViewModel(
     private val repository: RaffleRepository,
     private val raffleId: String
@@ -52,10 +54,21 @@ class SoldTicketsViewModel(
     }
 
     // Lista de entradas (ventas individuales o grupales)
-    val entries: StateFlow<List<SaleEntry>> = _searchQuery
-        .flatMapLatest { query -> repository.searchSoldOrReserved(raffleId, query) }
-        .map { matched -> buildEntries(matched) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val entries: StateFlow<List<SaleEntry>> = combine(_searchQuery, repository.getTicketsForRaffle(raffleId)) { query, allTickets ->
+        val saleTickets = allTickets.filter { it.status != TicketStatus.AVAILABLE }
+        val matched = if (query.isBlank()) {
+            saleTickets
+        } else {
+            val q = query.trim()
+            saleTickets.filter { ticket ->
+                ticket.buyerName?.contains(q, ignoreCase = true) == true ||
+                        ticket.buyerPhone?.contains(q, ignoreCase = true) == true ||
+                        ticket.number.contains(q)
+            }
+        }
+        val byGroup = allTickets.filter { it.groupId != null }.groupBy { it.groupId!! }
+        buildEntries(matched, byGroup)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Directorio de Clientes (Agrupado por nombre/teléfono)
     val buyers: StateFlow<List<BuyerSummary>> = _raffle
@@ -70,11 +83,11 @@ class SoldTicketsViewModel(
         val perGroup = raffle?.modality == RaffleModality.GROUPS
         val groupSize = raffle?.groupSize?.coerceAtLeast(1) ?: 1
 
-        return tickets.groupBy { it.buyerName ?: "Anónimo" }
-            .map { (name, buyerTickets) ->
+        return tickets.groupBy { (it.buyerName ?: "Anónimo") to (it.buyerPhone ?: "") }
+            .map { (key, buyerTickets) ->
                 BuyerSummary(
-                    name = name,
-                    phone = buyerTickets.firstOrNull()?.buyerPhone,
+                    name = key.first,
+                    phone = key.second.ifBlank { null },
                     tickets = buyerTickets,
                     totalPaid = if (perGroup) {
                         buyerTickets.count { it.status == TicketStatus.SOLD } / groupSize * price
@@ -90,7 +103,7 @@ class SoldTicketsViewModel(
             }.sortedByDescending { it.totalPaid + it.totalPending }
     }
 
-    private suspend fun buildEntries(matched: List<Ticket>): List<SaleEntry> {
+    private fun buildEntries(matched: List<Ticket>, byGroup: Map<String, List<Ticket>>): List<SaleEntry> {
         val individualEntries = mutableListOf<SaleEntry>()
         val groupEntries = mutableListOf<SaleEntry>()
         val seenGroupIds = mutableSetOf<String>()
@@ -101,7 +114,7 @@ class SoldTicketsViewModel(
                 individualEntries.add(SaleEntry(tickets = listOf(ticket), groupId = null))
             } else if (groupId !in seenGroupIds) {
                 seenGroupIds.add(groupId)
-                val fullGroup = repository.getTicketsByGroup(groupId)
+                val fullGroup = byGroup[groupId].orEmpty().sortedBy { it.number }
                 groupEntries.add(SaleEntry(tickets = fullGroup, groupId = groupId))
             }
         }

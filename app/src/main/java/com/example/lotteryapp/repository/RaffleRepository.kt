@@ -1,25 +1,31 @@
 package com.example.lotteryapp.repository
 
+import androidx.room.withTransaction
 import com.example.lotteryapp.data.dao.CancellationHistoryDao
 import com.example.lotteryapp.data.dao.RaffleDao
 import com.example.lotteryapp.data.dao.TicketDao
+import com.example.lotteryapp.data.dao.WinnerDao
+import com.example.lotteryapp.data.database.AppDatabase
 import com.example.lotteryapp.data.entity.CancellationHistory
 import com.example.lotteryapp.data.entity.Raffle
 import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
+import com.example.lotteryapp.data.entity.Winner
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
 class RaffleRepository(
+    private val database: AppDatabase,
     private val raffleDao: RaffleDao,
     private val ticketDao: TicketDao,
-    private val cancellationHistoryDao: CancellationHistoryDao
+    private val cancellationHistoryDao: CancellationHistoryDao,
+    private val winnerDao: WinnerDao
 ) {
 
     // --- Gestión de Rifas ---
-    suspend fun createRaffle(raffle: Raffle) {
+    suspend fun createRaffle(raffle: Raffle) = database.withTransaction {
         raffleDao.insert(raffle)
         val numbers = (0..99).map { it.toString().padStart(2, '0') }
         val tickets = if (raffle.modality == RaffleModality.GROUPS) {
@@ -53,9 +59,9 @@ class RaffleRepository(
         buyerName: String,
         buyerPhone: String?,
         status: TicketStatus
-    ): Result<List<Ticket>> {
+    ): Result<List<Ticket>> = database.withTransaction {
         val unavailableNumbers = mutableListOf<String>()
-        
+
         // 🛡️ VALIDACIÓN DE DISPONIBILIDAD (CONCURRENCIA)
         for (t in tickets) {
             val current = ticketDao.getById(t.id)
@@ -65,14 +71,13 @@ class RaffleRepository(
         }
 
         if (unavailableNumbers.isNotEmpty()) {
-            val msg = if (unavailableNumbers.size == 1) 
+            val msg = if (unavailableNumbers.size == 1)
                 "El número ${unavailableNumbers[0]} ya no está disponible."
-            else 
+            else
                 "Los números ${unavailableNumbers.joinToString(", ")} ya han sido vendidos o apartados por otro usuario."
-            return Result.failure(Exception(msg))
+            return@withTransaction Result.failure(Exception(msg))
         }
 
-        // PROCESAMIENTO SaaS (Agrupación en una sola transacción visual)
         // En modo grupos se preserva el groupId original; en sencilla se crea uno nuevo
         val firstGroupId = tickets.firstOrNull()?.groupId
         val groupId = if (firstGroupId != null && tickets.all { it.groupId == firstGroupId }) {
@@ -89,7 +94,7 @@ class RaffleRepository(
             )
         }
         updated.forEach { ticketDao.update(it) }
-        return Result.success(updated)
+        Result.success(updated)
     }
 
     suspend fun changeTicketStatus(ticket: Ticket, newStatus: TicketStatus): Result<Ticket> {
@@ -102,7 +107,7 @@ class RaffleRepository(
         return Result.success(updated)
     }
 
-    suspend fun cancelTicket(ticket: Ticket) {
+    suspend fun cancelTicket(ticket: Ticket) = database.withTransaction {
         cancellationHistoryDao.insert(
             CancellationHistory(
                 ticketId = ticket.id,
@@ -114,25 +119,16 @@ class RaffleRepository(
         ticketDao.update(ticket.copy(
             buyerName = null,
             buyerPhone = null,
-            status = TicketStatus.AVAILABLE,
-            groupId = null
+            status = TicketStatus.AVAILABLE
         ))
     }
 
     // --- Consultas ---
-    fun searchSoldOrReserved(raffleId: String, query: String): Flow<List<Ticket>> =
-        ticketDao.searchSoldOrReserved(raffleId, query)
-
-    suspend fun getTicketsByGroup(groupId: String): List<Ticket> =
-        ticketDao.getByGroupId(groupId)
-
     suspend fun changeTicketsStatus(tickets: List<Ticket>, newStatus: TicketStatus) {
         tickets.forEach { ticketDao.update(it.copy(status = newStatus)) }
     }
 
-    suspend fun cancelTickets(tickets: List<Ticket>) {
-        val sharedGroupId = tickets.firstOrNull()?.groupId
-            ?.takeIf { gid -> tickets.all { it.groupId == gid } }
+    suspend fun cancelTickets(tickets: List<Ticket>) = database.withTransaction {
         tickets.forEach { ticket ->
             cancellationHistoryDao.insert(
                 CancellationHistory(
@@ -145,8 +141,7 @@ class RaffleRepository(
             ticketDao.update(ticket.copy(
                 buyerName = null,
                 buyerPhone = null,
-                status = TicketStatus.AVAILABLE,
-                groupId = sharedGroupId
+                status = TicketStatus.AVAILABLE
             ))
         }
     }
@@ -171,4 +166,42 @@ class RaffleRepository(
         ticketDao.getCountByStatus(raffleId, status)
 
     fun getSoldGroupCount(raffleId: String): Flow<Int> = ticketDao.getSoldGroupCount(raffleId)
+
+    // --- Gestión de Ganadores ---
+    fun getWinnersForRaffle(raffleId: String): Flow<List<Winner>> = winnerDao.getByRaffle(raffleId)
+
+    suspend fun registerWinner(winner: Winner) {
+        val duplicate = winnerDao.getByNumber(winner.raffleId, winner.winningNumber)
+        if (duplicate != null) {
+            throw IllegalArgumentException("El número ${winner.winningNumber} ya está registrado como ganador de esta rifa.")
+        }
+        database.withTransaction {
+            winnerDao.insert(winner)
+            raffleDao.getById(winner.raffleId)?.let { raffle ->
+                raffleDao.update(raffle.copy(status = RaffleStatus.CLOSED, winningNumber = winner.winningNumber))
+            }
+        }
+    }
+
+    suspend fun updateWinner(winner: Winner) {
+        val duplicate = winnerDao.getByNumber(winner.raffleId, winner.winningNumber)
+        if (duplicate != null && duplicate.id != winner.id) {
+            throw IllegalArgumentException("El número ${winner.winningNumber} ya está registrado como ganador de esta rifa.")
+        }
+        winnerDao.update(winner)
+    }
+
+    suspend fun deleteWinner(winner: Winner) {
+        winnerDao.delete(winner)
+        // Si ya no queda ningún ganador, la rifa se vuelve a abrir (ACTIVA)
+        if (winnerDao.getCountByRaffle(winner.raffleId) == 0) {
+            raffleDao.getById(winner.raffleId)?.let { raffle ->
+                raffleDao.update(raffle.copy(status = RaffleStatus.ACTIVE))
+            }
+        }
+    }
+
+    suspend fun markWinnerNotified(winner: Winner) {
+        winnerDao.update(winner.copy(notified = true))
+    }
 }

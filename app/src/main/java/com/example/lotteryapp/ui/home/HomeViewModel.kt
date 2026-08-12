@@ -9,6 +9,7 @@ import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.repository.RaffleRepository
+import com.example.lotteryapp.util.DateUtils
 import com.example.lotteryapp.util.ImageSharingHelper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -38,14 +39,14 @@ class HomeViewModel(
         checkAndCloseExpiredRaffles()
     }
 
+    // Cierra la rifa recién al día siguiente del sorteo, para poder
+    // seguir registrando números durante el mismo día de la fecha.
     private fun checkAndCloseExpiredRaffles() {
         viewModelScope.launch {
             try {
-                val now = System.currentTimeMillis()
-                // Buscamos rifas activas que ya pasaron su fecha
                 val activeRaffles = repository.getRafflesByStatus(RaffleStatus.ACTIVE, "").first()
                 activeRaffles.forEach { raffle ->
-                    if (raffle.drawDate < now) {
+                    if (DateUtils.dayNumber(raffle.drawDate) < DateUtils.localTodayDayNumber()) {
                         repository.updateRaffle(raffle.copy(status = RaffleStatus.CLOSED))
                     }
                 }

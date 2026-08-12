@@ -6,7 +6,19 @@ import java.util.UUID
 
 enum class RaffleSource {
     LOTERIA_NACIONAL,
-    CHANCES,SORTEO,MANUAl,OTRO
+    CHANCES,
+    SORTEO,
+    MANUAL,
+    OTRO;
+
+    val displayName: String
+        get() = when (this) {
+            LOTERIA_NACIONAL -> "Lotería Nacional"
+            CHANCES -> "Chances"
+            SORTEO -> "Sorteo Especial"
+            MANUAL -> "Manual"
+            OTRO -> "Otro"
+        }
 }
 
 enum class RaffleStatus {

@@ -7,6 +7,7 @@ import com.example.lotteryapp.data.entity.Raffle
 import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleSource
 import com.example.lotteryapp.repository.RaffleRepository
+import com.example.lotteryapp.util.DateUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,12 +35,10 @@ data class CreateRaffleUiState(
     val isFormValid: Boolean
         get() {
             val price = ticketPrice.toDoubleOrNull() ?: 0.0
-            val today = System.currentTimeMillis()
-            val startOfToday = today - (today % (24 * 60 * 60 * 1000))
-            
+
             return name.isNotBlank() && prizeName.isNotBlank() &&
-                    price in 5.0..1000000.0 && 
-                    drawDate != null && drawDate >= startOfToday &&
+                    price in 5.0..1000000.0 &&
+                    drawDate != null && DateUtils.isSameDayOrAfter(drawDate) &&
                     (modality == RaffleModality.SENCILLA || groupSize in GROUP_SIZE_OPTIONS)
         }
 }

@@ -41,8 +41,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleSource
+import com.example.lotteryapp.util.DateUtils
 import com.example.lotteryapp.util.ImageSharingHelper
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -56,7 +58,13 @@ fun CreateRaffleScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.forLanguageTag("es-CR")) }
-    
+
+    val drawDate = uiState.drawDate
+    val dateError = drawDate != null && !DateUtils.isSameDayOrAfter(drawDate)
+    val priceValue = uiState.ticketPrice.toDoubleOrNull()
+    val priceError = uiState.ticketPrice.isNotEmpty() &&
+            (priceValue == null || priceValue < 5.0 || priceValue > 1000000.0)
+
     var showDatePicker by remember { mutableStateOf(false) }
     var sourceMenuExpanded by remember { mutableStateOf(false) }
     var modalityMenuExpanded by remember { mutableStateOf(false) }
@@ -195,6 +203,10 @@ fun CreateRaffleScreen(
                 prefix = { Text("₡ ") },
                 leadingIcon = { Icon(Icons.Filled.Payments, null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = priceError,
+                supportingText = if (priceError) {
+                    { Text("El precio debe estar entre ₡5 y ₡1,000,000", color = MaterialTheme.colorScheme.error) }
+                } else null,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 singleLine = true
@@ -208,6 +220,10 @@ fun CreateRaffleScreen(
                     readOnly = true,
                     label = { Text("Fecha del sorteo") },
                     leadingIcon = { Icon(Icons.Filled.CalendarMonth, null) },
+                    isError = dateError,
+                    supportingText = if (dateError) {
+                        { Text("No puedes seleccionar una fecha menor a la fecha actual", color = MaterialTheme.colorScheme.error) }
+                    } else null,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
                 )
@@ -225,11 +241,7 @@ fun CreateRaffleScreen(
                 onExpandedChange = { sourceMenuExpanded = it }
             ) {
                 OutlinedTextField(
-                    value = when(uiState.source) {
-                        RaffleSource.LOTERIA_NACIONAL -> "Lotería Nacional"
-                        RaffleSource.CHANCES -> "Chances"
-                        else -> "Otro"
-                    },
+                    value = uiState.source.displayName,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Tipo de sorteo") },
@@ -244,7 +256,7 @@ fun CreateRaffleScreen(
                 ) {
                     RaffleSource.entries.filter { it != RaffleSource.OTRO }.forEach { source ->
                         DropdownMenuItem(
-                            text = { Text(source.name.replace("_", " ")) },
+                            text = { Text(source.displayName) },
                             onClick = {
                                 viewModel.onSourceChange(source)
                                 sourceMenuExpanded = false
@@ -363,7 +375,19 @@ fun CreateRaffleScreen(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = uiState.drawDate)
+        val selectableDates = remember {
+            object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    DateUtils.isSameDayOrAfter(utcTimeMillis)
+
+                override fun isSelectableYear(year: Int): Boolean =
+                    year >= Calendar.getInstance().get(Calendar.YEAR)
+            }
+        }
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = uiState.drawDate,
+            selectableDates = selectableDates
+        )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {

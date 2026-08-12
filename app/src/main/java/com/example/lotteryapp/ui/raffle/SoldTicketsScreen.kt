@@ -1,6 +1,7 @@
 package com.example.lotteryapp.ui.raffle
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -277,10 +278,16 @@ private fun SalesView(
                 SaleEntryCardSaaS(
                     entry = entry,
                     onToggleStatus = { onToggleStatus(entry) },
-                    onResend = { raffle?.let { WhatsAppSender.sendTextReceipt(context, it, entry.tickets) } },
+                    onResend = { raffle?.let { r ->
+                        if (!WhatsAppSender.sendTextReceipt(context, r, entry.tickets)) {
+                            Toast.makeText(context, "WhatsApp no está instalado", Toast.LENGTH_SHORT).show()
+                        }
+                    } },
                     onSendReminder = {
                         val msg = viewModel.getReminderMessage(entry)
-                        WhatsAppSender.sendCustomMessage(context, entry.buyerPhone, msg)
+                        if (!WhatsAppSender.sendCustomMessage(context, entry.buyerPhone, msg)) {
+                            Toast.makeText(context, "WhatsApp no está instalado", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     onCancel = { onCancel(entry) },
                     onEditPhone = { onEditPhone(entry) }
@@ -339,7 +346,9 @@ private fun DirectoryView(
                                 Button(
                                     onClick = {
                                         val msg = "Hola ${buyer.name}, tienes un saldo pendiente de ${currencyFormat.format(buyer.totalPending)} en la Rifa ${raffle?.name}. ¡Gracias!"
-                                        WhatsAppSender.sendCustomMessage(context, buyer.phone, msg)
+                                        if (!WhatsAppSender.sendCustomMessage(context, buyer.phone, msg)) {
+                                            Toast.makeText(context, "WhatsApp no está instalado", Toast.LENGTH_SHORT).show()
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
                                     shape = RoundedCornerShape(10.dp),

@@ -6,7 +6,6 @@ import android.graphics.*
 import android.net.Uri
 import androidx.core.content.FileProvider
 import com.example.lotteryapp.data.entity.Raffle
-import com.example.lotteryapp.data.entity.RaffleSource
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
 import java.io.File
@@ -27,13 +26,7 @@ object ImageSharingHelper {
             maximumFractionDigits = 0
         }
 
-        val sourceText = when(raffle.source) {
-            RaffleSource.LOTERIA_NACIONAL -> "Lotería Nacional"
-            RaffleSource.CHANCES -> "Chances"
-            RaffleSource.SORTEO -> "Sorteo Especial"
-            RaffleSource.MANUAl -> "Manual"
-            else -> "Sorteo General"
-        }
+        val sourceText = raffle.source.displayName
 
         // Generar el Flyer Publicitario Premium
         val bitmap = generateRaffleFlyer(context, raffle, availableTickets, dateStr, sourceText, currencyFormat)
