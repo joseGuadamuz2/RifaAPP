@@ -57,10 +57,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.RaffleSource
+import com.example.lotteryapp.util.ImageSharingHelper
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -86,10 +88,14 @@ fun EditRaffleScreen(
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale("es", "CR")) }
     val scrollState = rememberScrollState()
 
+    val context = LocalContext.current
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
-        uri?.let { viewModel.onPrizePhotoChange(it.toString()) }
+        uri?.let {
+            val persistedPath = ImageSharingHelper.persistPickedImage(context, it)
+            if (persistedPath != null) viewModel.onPrizePhotoChange(persistedPath)
+        }
     }
 
     Scaffold(

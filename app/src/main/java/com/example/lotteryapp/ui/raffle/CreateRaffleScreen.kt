@@ -30,11 +30,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.lotteryapp.data.entity.RaffleSource
+import com.example.lotteryapp.util.ImageSharingHelper
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,10 +55,14 @@ fun CreateRaffleScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var sourceMenuExpanded by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
-        uri?.let { viewModel.onPrizePhotoChange(it.toString()) }
+        uri?.let {
+            val persistedPath = ImageSharingHelper.persistPickedImage(context, it)
+            if (persistedPath != null) viewModel.onPrizePhotoChange(persistedPath)
+        }
     }
 
     Scaffold(

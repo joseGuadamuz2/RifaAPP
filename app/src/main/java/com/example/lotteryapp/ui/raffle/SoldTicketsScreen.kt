@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.TicketStatus
@@ -107,9 +109,9 @@ fun SoldTicketsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SummaryStat(label = "Recaudado", value = currencyFormat.format(totalRecaudado), icon = Icons.Default.MonetizationOn, color = Color(0xFF2E7D32))
-                    SummaryStat(label = "Por Cobrar", value = currencyFormat.format(montoPendiente), icon = Icons.Default.HourglassBottom, color = Color(0xFFD32F2F))
-                    SummaryStat(label = "Venta", value = "$boletosVendidos/100", icon = Icons.Default.ConfirmationNumber, color = MaterialTheme.colorScheme.primary)
+                    SummaryStat(label = "Recaudado", value = currencyFormat.format(totalRecaudado), icon = Icons.Default.MonetizationOn, color = Color(0xFF2E7D32), modifier = Modifier.weight(1f))
+                    SummaryStat(label = "Por Cobrar", value = currencyFormat.format(montoPendiente), icon = Icons.Default.HourglassBottom, color = Color(0xFFD32F2F), modifier = Modifier.weight(1f))
+                    SummaryStat(label = "Venta", value = "$boletosVendidos/100", icon = Icons.Default.ConfirmationNumber, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
                 }
             }
 
@@ -267,14 +269,14 @@ private fun DirectoryView(
                         }
                         
                         Spacer(Modifier.height(12.dp))
-                        Text("Boletos: ${buyer.allNumbers.joinToString(", ")}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp)
+                        Text("Boletos: ${buyer.allNumbers.joinToString(", ")}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         
                         HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                         
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text("Inversión Total", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                Text(currencyFormat.format(buyer.totalPaid + buyer.totalPending), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                                Text(currencyFormat.format(buyer.totalPaid + buyer.totalPending), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             if (buyer.totalPending > 0) {
                                 Button(
@@ -302,11 +304,11 @@ private fun DirectoryView(
 }
 
 @Composable
-private fun SummaryStat(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun SummaryStat(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(icon, null, modifier = Modifier.size(22.dp), tint = color)
-        Text(text = value, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = color)
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text(text = value, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray, maxLines = 1)
     }
 }
 
@@ -332,8 +334,8 @@ private fun SaleEntryCardSaaS(
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = entry.buyerName ?: "Sin Nombre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = "Boletos: ${entry.numbers.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
+                    Text(text = entry.buyerName ?: "Sin Nombre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(text = "Boletos: ${entry.numbers.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 Surface(
                     color = if (isSold) Color(0xFFE8F5E9) else Color(0xFFFFF3E0), 

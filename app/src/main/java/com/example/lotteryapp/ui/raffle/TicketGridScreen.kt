@@ -244,10 +244,25 @@ private fun BottomActionPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SummaryStatSmall(label = "VENDIDO", value = sold.toString(), color = ColorSold)
-                SummaryStatSmall(label = "RESERVA", value = reserved.toString(), color = ColorReserved)
-                SummaryStatSmall(label = "LIBRE", value = available.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+            Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SummaryStatSmall(
+                    label = "VENDIDO",
+                    value = sold.toString(),
+                    color = ColorSold,
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryStatSmall(
+                    label = "RESERVA",
+                    value = reserved.toString(),
+                    color = ColorReserved,
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryStatSmall(
+                    label = "LIBRE",
+                    value = available.toString(),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             if (isRaffleActive) {
@@ -258,7 +273,7 @@ private fun BottomActionPanel(
                         containerColor = if (selectedCount == 0) MaterialTheme.colorScheme.primary else ColorSelectedBorder
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
                 ) {
                     Icon(
                         if (selectedCount == 0) Icons.Default.Bolt else Icons.Default.CheckCircle,
@@ -270,7 +285,10 @@ private fun BottomActionPanel(
                         text = if (selectedCount == 0) "VENTA RÁPIDA" else "CONFIRMAR ($selectedCount)",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 0.5.sp
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -464,45 +482,45 @@ private fun RaffleHeaderSaaS(raffle: Raffle, onEditClick: () -> Unit, onOpenSold
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(50.dp).clip(RoundedCornerShape(10.dp)).clickable { onEditClick() }) {
+                Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).clickable { onEditClick() }) {
                     if (raffle.prizePhotoPath != null) {
                         AsyncImage(model = raffle.prizePhotoPath, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     } else {
                         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Image, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Image, null, tint = Color.Gray, modifier = Modifier.size(26.dp))
                         }
                     }
                 }
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(raffle.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(raffle.prizeName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(raffle.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(raffle.prizeName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Surface(color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold.copy(alpha = 0.1f) else Color.LightGray.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
-                    Text(if(raffle.status == RaffleStatus.ACTIVE) "ACTIVA" else "CERRADA", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold else Color.Gray, fontWeight = FontWeight.Bold)
+                    Text(if(raffle.status == RaffleStatus.ACTIVE) "ACTIVA" else "CERRADA", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold else Color.Gray, fontWeight = FontWeight.Bold)
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    RaffleDetailItemCompact(Icons.Default.Payments, "₡${raffle.ticketPrice.toInt()}")
-                    RaffleDetailItemCompact(Icons.Default.Event, dateStr)
-                    RaffleDetailItemCompact(Icons.Default.ConfirmationNumber, sourceStr)
+                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RaffleDetailItemCompact(Icons.Default.Payments, "₡${raffle.ticketPrice.toInt()}", Modifier.weight(1f))
+                    RaffleDetailItemCompact(Icons.Default.Event, dateStr, Modifier.weight(1f))
+                    RaffleDetailItemCompact(Icons.Default.ConfirmationNumber, sourceStr, Modifier.weight(1f))
                 }
 
                 TextButton(
                     onClick = onOpenSoldTickets,
-                    modifier = Modifier.height(32.dp),
+                    modifier = Modifier.height(36.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ListAlt, null, modifier = Modifier.size(14.dp))
+                    Icon(Icons.AutoMirrored.Filled.ListAlt, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("VENTAS", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Text("VENTAS", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
@@ -510,11 +528,11 @@ private fun RaffleHeaderSaaS(raffle: Raffle, onEditClick: () -> Unit, onOpenSold
 }
 
 @Composable
-private fun RaffleDetailItemCompact(icon: ImageVector, value: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+private fun RaffleDetailItemCompact(icon: ImageVector, value: String, modifier: Modifier = Modifier) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+        Icon(icon, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
         Spacer(Modifier.width(4.dp))
-        Text(value, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -548,16 +566,16 @@ private fun LegendRow() {
 @Composable
 private fun LegendItem(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color).border(0.5.dp, Color.Gray.copy(alpha = 0.3f), CircleShape))
-        Text(text = label, fontSize = 10.sp, fontWeight = FontWeight.Normal, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
+        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color).border(0.5.dp, Color.Gray.copy(alpha = 0.3f), CircleShape))
+        Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
     }
 }
 
 @Composable
-private fun SummaryStatSmall(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.Start) {
-        Text(text = value, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = color)
-        Text(text = label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), letterSpacing = 0.5.sp)
+private fun SummaryStatSmall(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = value, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = color, maxLines = 1)
+        Text(text = label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), letterSpacing = 0.5.sp, maxLines = 1)
     }
 }
 

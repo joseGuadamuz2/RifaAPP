@@ -175,6 +175,23 @@ object ImageSharingHelper {
         } catch (e: Exception) { null }
     }
 
+    fun persistPickedImage(context: Context, uri: Uri): String? {
+        return try {
+            val dir = File(context.filesDir, "prize_images").apply { mkdirs() }
+            val mimeType = context.contentResolver.getType(uri) ?: ""
+            val ext = when {
+                mimeType.contains("png") -> "png"
+                mimeType.contains("webp") -> "webp"
+                else -> "jpg"
+            }
+            val file = File(dir, "prize_${System.currentTimeMillis()}.$ext")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(file).use { output -> input.copyTo(output) }
+            }
+            file.absolutePath
+        } catch (e: Exception) { null }
+    }
+
     private fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri? {
         return try {
             val cachePath = File(context.cacheDir, "shared_images").apply { mkdirs() }
