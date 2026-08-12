@@ -14,7 +14,7 @@ object DatabaseProvider {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "lotteryapp_database"
-            ).build().also { instance = it }
+            ).addMigrations(AppDatabase.MIGRATION_1_2).build().also { instance = it }
         }
     }
 }

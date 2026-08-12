@@ -74,6 +74,18 @@ class TicketGridViewModel(
         }
     }
 
+    fun cancelGroup(group: List<Ticket>) {
+        viewModelScope.launch {
+            repository.cancelTickets(group)
+        }
+    }
+
+    fun changeTicketsStatus(tickets: List<Ticket>, newStatus: TicketStatus) {
+        viewModelScope.launch {
+            repository.changeTicketsStatus(tickets, newStatus)
+        }
+    }
+
     fun clearError() { _errorMessage.value = null }
     fun clearLastTransaction() { _lastTransaction.value = null }
 

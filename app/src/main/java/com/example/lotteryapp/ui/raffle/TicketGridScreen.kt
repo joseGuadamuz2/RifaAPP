@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.lotteryapp.data.entity.Raffle
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleSource
 import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.Ticket
@@ -71,11 +72,25 @@ fun TicketGridScreen(
 
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
     var selectedTicketForDetails by remember { mutableStateOf<Ticket?>(null) }
+    var selectedGroupForDetails by remember { mutableStateOf<List<Ticket>?>(null) }
     var showGroupSellDialog by remember { mutableStateOf(false) }
     var showQuickSellDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val isRaffleActive = raffle?.status == RaffleStatus.ACTIVE
+    val isGroupMode = raffle?.modality == RaffleModality.GROUPS
+
+    val groups: List<List<Ticket>> = remember(tickets, isGroupMode) {
+        if (isGroupMode) {
+            tickets.groupBy { it.groupId ?: it.id }
+                .values
+                .map { it.sortedBy { t -> t.number } }
+                .sortedBy { it.first().number }
+        } else {
+            emptyList()
+        }
+    }
+    val selectedGroupCount = if (isGroupMode && selectedIds.isNotEmpty()) 1 else 0
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -97,7 +112,10 @@ fun TicketGridScreen(
                 actions = {
                     if (selectedIds.isNotEmpty()) {
                         TextButton(onClick = { selectedIds = emptySet() }) {
-                            Text("Limpiar (${selectedIds.size})", fontWeight = FontWeight.Bold)
+                            Text(
+                                "Limpiar (${if (isGroupMode) selectedGroupCount else selectedIds.size})",
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     } else {
                         IconButton(onClick = {
@@ -121,23 +139,49 @@ fun TicketGridScreen(
                 )
             }
             LegendRow()
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(10),
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp, vertical = 4.dp)
-            ) {
-                items(tickets, key = { it.id }) { ticket ->
-                    val isSelected = selectedIds.contains(ticket.id)
-                    TicketCell(
-                        ticket = ticket,
-                        isSelected = isSelected,
-                        onClick = {
-                            if (ticket.status == TicketStatus.AVAILABLE && isRaffleActive) {
-                                selectedIds = if (isSelected) selectedIds - ticket.id else selectedIds + ticket.id
-                            } else {
-                                selectedTicketForDetails = ticket
+            if (isGroupMode) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(5),
+                    modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    items(groups, key = { group -> group.joinToString(",") { it.id } }) { group ->
+                        val gStatus = groupStatusOf(group)
+                        val isSelected = group.all { selectedIds.contains(it.id) }
+                        GroupCell(
+                            group = group,
+                            index = groups.indexOf(group),
+                            groupCount = groups.size,
+                            status = gStatus,
+                            isSelected = isSelected,
+                            onClick = {
+                                if (gStatus == TicketStatus.AVAILABLE && isRaffleActive) {
+                                    selectedIds = if (isSelected) emptySet() else group.map { it.id }.toSet()
+                                } else {
+                                    selectedGroupForDetails = group
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(10),
+                    modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    items(tickets, key = { it.id }) { ticket ->
+                        val isSelected = selectedIds.contains(ticket.id)
+                        TicketCell(
+                            ticket = ticket,
+                            isSelected = isSelected,
+                            onClick = {
+                                if (ticket.status == TicketStatus.AVAILABLE && isRaffleActive) {
+                                    selectedIds = if (isSelected) selectedIds - ticket.id else selectedIds + ticket.id
+                                } else {
+                                    selectedTicketForDetails = ticket
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
@@ -146,11 +190,13 @@ fun TicketGridScreen(
                 sold = tickets.count { it.status == TicketStatus.SOLD },
                 reserved = tickets.count { it.status == TicketStatus.RESERVED },
                 available = tickets.count { it.status == TicketStatus.AVAILABLE },
-                total = tickets.size,
+                total = if (isGroupMode) groups.size else tickets.size,
+                mode = if (isGroupMode) RaffleModality.GROUPS else RaffleModality.SENCILLA,
                 isRaffleActive = isRaffleActive,
-                selectedCount = selectedIds.size,
+                selectedCount = if (isGroupMode) selectedGroupCount else selectedIds.size,
                 onButtonClick = {
-                    if (selectedIds.isEmpty()) showQuickSellDialog = true
+                    if (isGroupMode) showGroupSellDialog = true
+                    else if (selectedIds.isEmpty()) showQuickSellDialog = true
                     else showGroupSellDialog = true
                 }
             )
@@ -200,6 +246,27 @@ fun TicketGridScreen(
         }
     }
 
+    if (selectedGroupForDetails != null) {
+        val group = selectedGroupForDetails!!
+        ModalBottomSheet(onDismissRequest = { selectedGroupForDetails = null }) {
+            GroupActionSheetContent(
+                group = group,
+                canModify = isRaffleActive,
+                onToggleStatus = {
+                    val entryTickets = group
+                    val newStatus = if (entryTickets.first().status == TicketStatus.SOLD) TicketStatus.RESERVED else TicketStatus.SOLD
+                    viewModel.changeTicketsStatus(entryTickets, newStatus)
+                    selectedGroupForDetails = null
+                },
+                onFree = {
+                    viewModel.cancelGroup(group)
+                    selectedGroupForDetails = null
+                    scope.launch { snackbarHostState.showSnackbar("Grupo liberado") }
+                }
+            )
+        }
+    }
+
     lastTransaction?.let { transaction ->
         raffle?.let { currentRaffle ->
             val hasPhone = !transaction.firstOrNull()?.buyerPhone.isNullOrBlank()
@@ -229,10 +296,12 @@ private fun BottomActionPanel(
     reserved: Int,
     available: Int,
     total: Int,
+    mode: RaffleModality,
     isRaffleActive: Boolean,
     selectedCount: Int,
     onButtonClick: () -> Unit
 ) {
+    val isGroupMode = mode == RaffleModality.GROUPS
     Surface(
         tonalElevation = 8.dp,
         shadowElevation = 12.dp,
@@ -268,6 +337,7 @@ private fun BottomActionPanel(
             if (isRaffleActive) {
                 Button(
                     onClick = onButtonClick,
+                    enabled = !isGroupMode || selectedCount > 0,
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (selectedCount == 0) MaterialTheme.colorScheme.primary else ColorSelectedBorder
@@ -276,13 +346,21 @@ private fun BottomActionPanel(
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
                 ) {
                     Icon(
-                        if (selectedCount == 0) Icons.Default.Bolt else Icons.Default.CheckCircle,
+                        when {
+                            isGroupMode && selectedCount == 0 -> Icons.Default.Groups
+                            selectedCount > 0 -> Icons.Default.CheckCircle
+                            else -> Icons.Default.Bolt
+                        },
                         null,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = if (selectedCount == 0) "VENTA RÁPIDA" else "CONFIRMAR ($selectedCount)",
+                        text = when {
+                            isGroupMode && selectedCount == 0 -> "SELECCIONA UN GRUPO"
+                            selectedCount > 0 -> "CONFIRMAR ($selectedCount)"
+                            else -> "VENTA RÁPIDA"
+                        },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 0.5.sp,
@@ -613,5 +691,132 @@ private fun TicketCell(ticket: Ticket, isSelected: Boolean, onClick: () -> Unit)
             fontWeight = if (isSelected || ticket.status != TicketStatus.AVAILABLE) FontWeight.ExtraBold else FontWeight.Medium,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun GroupCell(
+    group: List<Ticket>,
+    index: Int,
+    groupCount: Int,
+    status: TicketStatus,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = when (status) {
+        TicketStatus.AVAILABLE -> if (isSelected) ColorSelectedBorder.copy(alpha = 0.1f) else Color.White
+        TicketStatus.RESERVED -> ColorReserved
+        TicketStatus.SOLD -> ColorSold
+    }
+    val textColor = when (status) {
+        TicketStatus.AVAILABLE -> if (isSelected) ColorSelectedBorder else Color(0xFF424242)
+        else -> Color.White
+    }
+    val showRange = group.size > 10
+    val numbersText = group.joinToString(" - ") { it.number }
+
+    Box(
+        modifier = Modifier
+            .padding(2.dp)
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(8.dp))
+            .background(backgroundColor)
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) ColorSelectedBorder else Color.Gray.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(4.dp)) {
+            Text(
+                text = "G${index + 1}/$groupCount",
+                fontSize = 9.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                maxLines = 1
+            )
+            if (showRange) {
+                Text(
+                    text = "${group.size} números",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = textColor,
+                    maxLines = 1
+                )
+                Text(
+                    text = numbersText,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = textColor.copy(alpha = 0.85f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            } else {
+                Text(
+                    text = numbersText,
+                    fontSize = if (group.size >= 8) 9.sp else 13.sp,
+                    fontWeight = if (isSelected || status != TicketStatus.AVAILABLE) FontWeight.ExtraBold else FontWeight.Medium,
+                    color = textColor,
+                    textAlign = TextAlign.Center,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+private fun groupStatusOf(group: List<Ticket>): TicketStatus {
+    if (group.isEmpty()) return TicketStatus.AVAILABLE
+    return when {
+        group.all { it.status == TicketStatus.SOLD } -> TicketStatus.SOLD
+        group.all { it.status == TicketStatus.AVAILABLE } -> TicketStatus.AVAILABLE
+        else -> TicketStatus.RESERVED
+    }
+}
+
+@Composable
+private fun GroupActionSheetContent(
+    group: List<Ticket>,
+    canModify: Boolean,
+    onToggleStatus: () -> Unit,
+    onFree: () -> Unit
+) {
+    val first = group.firstOrNull() ?: return
+    val soldStatus = first.status == TicketStatus.SOLD
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp, start = 16.dp, end = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "Grupo · ${group.size} números",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+        Text(
+            text = group.joinToString(" - ") { it.number },
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        ListItem(
+            headlineContent = { Text("Cliente: ${first.buyerName ?: "Sin nombre"}") },
+            supportingContent = { Text("Estado: ${if (soldStatus) "Vendido" else "Apartado"}") },
+            leadingContent = { Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.primary) }
+        )
+        if (canModify) {
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(8.dp))
+            if (first.status == TicketStatus.RESERVED) {
+                ListItem(headlineContent = { Text("Confirmar Pago (Marcar como Vendido)", fontWeight = FontWeight.Bold, color = ColorSold) }, leadingContent = { Icon(Icons.Default.CheckCircle, null, tint = ColorSold) }, modifier = Modifier.clickable { onToggleStatus() })
+            } else {
+                ListItem(headlineContent = { Text("Cambiar a Apartado", fontWeight = FontWeight.Bold, color = ColorReserved) }, leadingContent = { Icon(Icons.Default.Schedule, null, tint = ColorReserved) }, modifier = Modifier.clickable { onToggleStatus() })
+            }
+            ListItem(headlineContent = { Text("Liberar grupo (Borrar venta)", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }, leadingContent = { Icon(Icons.Default.DeleteSweep, null, tint = MaterialTheme.colorScheme.error) }, modifier = Modifier.clickable { onFree() })
+        }
     }
 }

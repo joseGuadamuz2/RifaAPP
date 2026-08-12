@@ -3,6 +3,7 @@ package com.example.lotteryapp.ui.raffle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleSource
 import com.example.lotteryapp.repository.RaffleRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +17,8 @@ data class EditRaffleUiState(
     val prizePhotoPath: String? = null,
     val ticketPrice: String = "",
     val source: RaffleSource = RaffleSource.LOTERIA_NACIONAL,
+    val modality: RaffleModality = RaffleModality.SENCILLA,
+    val groupSize: Int = 1,
     val drawDate: Long? = null,
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
@@ -40,6 +43,8 @@ class EditRaffleViewModel(
                     prizePhotoPath = raffle.prizePhotoPath,
                     ticketPrice = raffle.ticketPrice.toString(),
                     source = raffle.source,
+                    modality = raffle.modality,
+                    groupSize = raffle.groupSize,
                     drawDate = raffle.drawDate,
                     isLoading = false
                 )

@@ -5,6 +5,7 @@ import com.example.lotteryapp.data.dao.RaffleDao
 import com.example.lotteryapp.data.dao.TicketDao
 import com.example.lotteryapp.data.entity.CancellationHistory
 import com.example.lotteryapp.data.entity.Raffle
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
@@ -20,8 +21,22 @@ class RaffleRepository(
     // --- Gestión de Rifas ---
     suspend fun createRaffle(raffle: Raffle) {
         raffleDao.insert(raffle)
-        val tickets = (0..99).map { number ->
-            Ticket(raffleId = raffle.id, number = number.toString().padStart(2, '0'))
+        val numbers = (0..99).map { it.toString().padStart(2, '0') }
+        val tickets = if (raffle.modality == RaffleModality.GROUPS) {
+            val size = raffle.groupSize.coerceIn(1, 100)
+            numbers.shuffled()
+                .chunked(size)
+                .map { groupNumbers ->
+                    val groupId = UUID.randomUUID().toString()
+                    groupNumbers.map { number ->
+                        Ticket(raffleId = raffle.id, number = number, groupId = groupId)
+                    }
+                }
+                .flatten()
+        } else {
+            numbers.map { number ->
+                Ticket(raffleId = raffle.id, number = number)
+            }
         }
         ticketDao.insertAll(tickets)
     }
@@ -58,7 +73,13 @@ class RaffleRepository(
         }
 
         // PROCESAMIENTO SaaS (Agrupación en una sola transacción visual)
-        val groupId = UUID.randomUUID().toString()
+        // En modo grupos se preserva el groupId original; en sencilla se crea uno nuevo
+        val firstGroupId = tickets.firstOrNull()?.groupId
+        val groupId = if (firstGroupId != null && tickets.all { it.groupId == firstGroupId }) {
+            firstGroupId
+        } else {
+            UUID.randomUUID().toString()
+        }
         val updated = tickets.map { ticket ->
             ticket.copy(
                 buyerName = buyerName,
@@ -110,7 +131,24 @@ class RaffleRepository(
     }
 
     suspend fun cancelTickets(tickets: List<Ticket>) {
-        tickets.forEach { cancelTicket(it) }
+        val sharedGroupId = tickets.firstOrNull()?.groupId
+            ?.takeIf { gid -> tickets.all { it.groupId == gid } }
+        tickets.forEach { ticket ->
+            cancellationHistoryDao.insert(
+                CancellationHistory(
+                    ticketId = ticket.id,
+                    previousBuyerName = ticket.buyerName ?: "",
+                    previousBuyerPhone = ticket.buyerPhone,
+                    cancellationDate = System.currentTimeMillis()
+                )
+            )
+            ticketDao.update(ticket.copy(
+                buyerName = null,
+                buyerPhone = null,
+                status = TicketStatus.AVAILABLE,
+                groupId = sharedGroupId
+            ))
+        }
     }
 
     suspend fun updateBuyerPhone(tickets: List<Ticket>, newPhone: String?) {
@@ -131,4 +169,6 @@ class RaffleRepository(
 
     fun getTicketsCountByStatus(raffleId: String, status: TicketStatus): Flow<Int> =
         ticketDao.getCountByStatus(raffleId, status)
+
+    fun getSoldGroupCount(raffleId: String): Flow<Int> = ticketDao.getSoldGroupCount(raffleId)
 }

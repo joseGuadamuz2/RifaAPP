@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleSource
 import com.example.lotteryapp.util.ImageSharingHelper
 import java.text.SimpleDateFormat
@@ -54,6 +57,8 @@ fun CreateRaffleScreen(
     
     var showDatePicker by remember { mutableStateOf(false) }
     var sourceMenuExpanded by remember { mutableStateOf(false) }
+    var modalityMenuExpanded by remember { mutableStateOf(false) }
+    var groupSizeMenuExpanded by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -173,7 +178,7 @@ fun CreateRaffleScreen(
             OutlinedTextField(
                 value = uiState.ticketPrice,
                 onValueChange = viewModel::onTicketPriceChange,
-                label = { Text("Precio por boleto") },
+                label = { Text(if (uiState.modality == RaffleModality.GROUPS) "Precio por grupo" else "Precio por boleto") },
                 prefix = { Text("₡ ") },
                 leadingIcon = { Icon(Icons.Filled.Payments, null) },
                 modifier = Modifier.fillMaxWidth(),
@@ -231,6 +236,90 @@ fun CreateRaffleScreen(
                             }
                         )
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // MODALIDAD DE LA RIFA
+            ExposedDropdownMenuBox(
+                expanded = modalityMenuExpanded,
+                onExpandedChange = { modalityMenuExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = if (uiState.modality == RaffleModality.GROUPS) "Por grupos" else "Sencilla",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Modalidad") },
+                    leadingIcon = { Icon(Icons.Filled.Groups, null) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modalityMenuExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                ExposedDropdownMenu(
+                    expanded = modalityMenuExpanded,
+                    onDismissRequest = { modalityMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Sencilla") },
+                        onClick = {
+                            viewModel.onModalityChange(RaffleModality.SENCILLA)
+                            modalityMenuExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Por grupos") },
+                        onClick = {
+                            viewModel.onModalityChange(RaffleModality.GROUPS)
+                            modalityMenuExpanded = false
+                        }
+                    )
+                }
+            }
+
+            if (uiState.modality == RaffleModality.GROUPS) {
+                // TAMAÑO DEL GRUPO
+                ExposedDropdownMenuBox(
+                    expanded = groupSizeMenuExpanded,
+                    onExpandedChange = { groupSizeMenuExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = "${uiState.groupSize} números",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Tamaño del grupo") },
+                        leadingIcon = { Icon(Icons.Filled.GridView, null) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = groupSizeMenuExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = groupSizeMenuExpanded,
+                        onDismissRequest = { groupSizeMenuExpanded = false }
+                    ) {
+                        GROUP_SIZE_OPTIONS.forEach { size ->
+                            DropdownMenuItem(
+                                text = { Text("${size} número${if (size > 1) "s" else ""} · ${100 / size} grupos") },
+                                onClick = {
+                                    viewModel.onGroupSizeChange(size)
+                                    groupSizeMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                ) {
+                    Text(
+                        text = "Se crearán ${uiState.groupCount} grupos aleatorios de ${uiState.groupSize} números cada uno (100 boletos en total).",
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.lotteryapp.data.entity.Raffle
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.repository.RaffleRepository
@@ -42,14 +43,18 @@ class HomeViewModel(
                 val itemFlows: List<Flow<RaffleItem>> = raffleList.map { raffle ->
                     combine(
                         repository.getTicketsCount(raffle.id),
-                        repository.getTicketsCountByStatus(raffle.id, TicketStatus.SOLD)
-                    ) { total: Int, sold: Int -> 
+                        repository.getTicketsCountByStatus(raffle.id, TicketStatus.SOLD),
+                        repository.getSoldGroupCount(raffle.id)
+                    ) { total: Int, sold: Int, soldGroups: Int ->
+                        val isGroupMode = raffle.modality == RaffleModality.GROUPS
+                        val unitTotal = if (isGroupMode) total.div(raffle.groupSize.coerceAtLeast(1)) else total
+                        val unitSold = if (isGroupMode) soldGroups else sold
                         RaffleItem(
-                            raffle = raffle, 
-                            soldCount = sold, 
-                            totalCount = total,
-                            collectedAmount = sold * raffle.ticketPrice // Cálculo del dinero
-                        ) 
+                            raffle = raffle,
+                            soldCount = unitSold,
+                            totalCount = unitTotal,
+                            collectedAmount = unitSold * raffle.ticketPrice
+                        )
                     }
                 }
                 combine(itemFlows) { items: Array<RaffleItem> -> items.toList() }

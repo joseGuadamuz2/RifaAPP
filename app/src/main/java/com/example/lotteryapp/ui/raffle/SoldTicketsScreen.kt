@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.util.WhatsAppSender
 import java.text.NumberFormat
@@ -50,10 +51,14 @@ fun SoldTicketsScreen(
     }
 
     // Cálculos para Dashboard
-    val totalRecaudado = entries.filter { it.status == TicketStatus.SOLD }.sumOf { it.tickets.size * (raffle?.ticketPrice ?: 0.0) }
+    val perGroup = raffle?.modality == RaffleModality.GROUPS
+    val unitsFor = { entry: SaleEntry ->
+        if (perGroup) 1 else entry.tickets.size
+    }
+    val totalRecaudado = entries.filter { it.status == TicketStatus.SOLD }.sumOf { unitsFor(it) * (raffle?.ticketPrice ?: 0.0) }
     val boletosVendidos = entries.filter { it.status == TicketStatus.SOLD }.sumOf { it.tickets.size }
     val boletosPendientes = entries.filter { it.status == TicketStatus.RESERVED }.sumOf { it.tickets.size }
-    val montoPendiente = entries.filter { it.status == TicketStatus.RESERVED }.sumOf { it.tickets.size * (raffle?.ticketPrice ?: 0.0) }
+    val montoPendiente = entries.filter { it.status == TicketStatus.RESERVED }.sumOf { unitsFor(it) * (raffle?.ticketPrice ?: 0.0) }
 
     Scaffold(
         topBar = {

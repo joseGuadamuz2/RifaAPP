@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.lotteryapp.data.entity.Raffle
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleSource
 import com.example.lotteryapp.repository.RaffleRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,20 +12,28 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+val GROUP_SIZE_OPTIONS = listOf(2, 4, 5, 10, 20, 25, 50)
+
 data class CreateRaffleUiState(
     val name: String = "",
     val prizeName: String = "",
     val ticketPrice: String = "",
     val source: RaffleSource = RaffleSource.LOTERIA_NACIONAL,
+    val modality: RaffleModality = RaffleModality.SENCILLA,
+    val groupSize: Int = 2,
     val drawDate: Long? = null,
     val prizePhotoPath: String? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val createdRaffleId: String? = null
 ) {
+    val groupCount: Int
+        get() = if (modality == RaffleModality.GROUPS) 100 / groupSize else 0
+
     val isFormValid: Boolean
         get() = name.isNotBlank() && prizeName.isNotBlank() &&
-                ticketPrice.toDoubleOrNull() != null && drawDate != null
+                ticketPrice.toDoubleOrNull() != null && drawDate != null &&
+                (modality == RaffleModality.SENCILLA || groupSize in GROUP_SIZE_OPTIONS)
 }
 
 class CreateRaffleViewModel(
@@ -48,6 +57,14 @@ class CreateRaffleViewModel(
 
     fun onSourceChange(value: RaffleSource) {
         _uiState.value = _uiState.value.copy(source = value)
+    }
+
+    fun onModalityChange(value: RaffleModality) {
+        _uiState.value = _uiState.value.copy(modality = value)
+    }
+
+    fun onGroupSizeChange(value: Int) {
+        _uiState.value = _uiState.value.copy(groupSize = value)
     }
 
     fun onDrawDateChange(value: Long) {
@@ -74,6 +91,8 @@ class CreateRaffleViewModel(
                 ticketPrice = price,
                 drawDate = date,
                 source = state.source,
+                modality = state.modality,
+                groupSize = state.groupSize,
                 prizePhotoPath = state.prizePhotoPath
             )
             repository.createRaffle(raffle)

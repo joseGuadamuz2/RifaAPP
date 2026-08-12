@@ -46,4 +46,7 @@ interface TicketDao {
     @Query("SELECT COUNT(*) FROM tickets WHERE raffleId = :raffleId AND status = :status")
     fun getCountByStatus(raffleId: String, status: TicketStatus): Flow<Int>
 
+    @Query("SELECT COUNT(DISTINCT groupId) FROM tickets WHERE raffleId = :raffleId AND status = 'SOLD' AND groupId IS NOT NULL")
+    fun getSoldGroupCount(raffleId: String): Flow<Int>
+
 }

@@ -14,6 +14,11 @@ enum class RaffleStatus {
     CLOSED
 }
 
+enum class RaffleModality {
+    SENCILLA,
+    GROUPS
+}
+
 @Entity(tableName = "raffles")
 data class Raffle(
     @PrimaryKey
@@ -26,6 +31,8 @@ data class Raffle(
     val ticketPrice: Double,
     val drawDate: Long,
     val source: RaffleSource,
+    val modality: RaffleModality = RaffleModality.SENCILLA,
+    val groupSize: Int = 1,
     val winningNumber: String? = null,
     val status: RaffleStatus = RaffleStatus.ACTIVE
 )

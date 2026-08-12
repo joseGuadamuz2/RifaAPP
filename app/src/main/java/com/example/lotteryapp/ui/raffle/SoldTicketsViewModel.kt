@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.lotteryapp.data.entity.Raffle
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.repository.RaffleRepository
@@ -54,21 +55,37 @@ class SoldTicketsViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Directorio de Clientes (Agrupado por nombre/teléfono)
-    val buyers: StateFlow<List<BuyerSummary>> = entries.map { saleEntries ->
+    val buyers: StateFlow<List<BuyerSummary>> = _raffle
+        .flatMapLatest { raffle ->
+            entries.map { saleEntries -> buildBuyers(saleEntries, raffle) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun buildBuyers(saleEntries: List<SaleEntry>, raffle: Raffle?): List<BuyerSummary> {
         val tickets = saleEntries.flatMap { it.tickets }
-        val price = _raffle.value?.ticketPrice ?: 0.0
-        
-        tickets.groupBy { it.buyerName ?: "Anónimo" }
+        val price = raffle?.ticketPrice ?: 0.0
+        val perGroup = raffle?.modality == RaffleModality.GROUPS
+        val groupSize = raffle?.groupSize?.coerceAtLeast(1) ?: 1
+
+        return tickets.groupBy { it.buyerName ?: "Anónimo" }
             .map { (name, buyerTickets) ->
                 BuyerSummary(
                     name = name,
                     phone = buyerTickets.firstOrNull()?.buyerPhone,
                     tickets = buyerTickets,
-                    totalPaid = buyerTickets.count { it.status == TicketStatus.SOLD } * price,
-                    totalPending = buyerTickets.count { it.status == TicketStatus.RESERVED } * price
+                    totalPaid = if (perGroup) {
+                        buyerTickets.count { it.status == TicketStatus.SOLD } / groupSize * price
+                    } else {
+                        buyerTickets.count { it.status == TicketStatus.SOLD } * price
+                    },
+                    totalPending = if (perGroup) {
+                        buyerTickets.count { it.status == TicketStatus.RESERVED } / groupSize * price
+                    } else {
+                        buyerTickets.count { it.status == TicketStatus.RESERVED } * price
+                    }
                 )
             }.sortedByDescending { it.totalPaid + it.totalPending }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }
 
     private suspend fun buildEntries(matched: List<Ticket>): List<SaleEntry> {
         val individualEntries = mutableListOf<SaleEntry>()
@@ -106,9 +123,12 @@ class SoldTicketsViewModel(
     }
 
     fun getReminderMessage(entry: SaleEntry): String {
-        val raffleName = _raffle.value?.name ?: "la rifa"
-        val total = entry.tickets.size * (_raffle.value?.ticketPrice ?: 0.0)
-        return "Hola ${entry.buyerName}, te saludo de la Rifa $raffleName. Paso a recordarte el pago de tus números: ${entry.numbers.joinToString(", ")}. El total es ₡${total.toInt()}. ¡Gracias!"
+        val raffle = _raffle.value
+        val raffleName = raffle?.name ?: "la rifa"
+        val perGroup = raffle?.modality == RaffleModality.GROUPS
+        val total = if (perGroup) raffle!!.ticketPrice else entry.tickets.size * (raffle?.ticketPrice ?: 0.0)
+        val unitLabel = if (perGroup) "por grupo" else "por boleto"
+        return "Hola ${entry.buyerName}, te saludo de la Rifa $raffleName. Paso a recordarte el pago de tus números: ${entry.numbers.joinToString(", ")} ($unitLabel). El total es ₡${total.toInt()}. ¡Gracias!"
     }
 
     class Factory(private val repository: RaffleRepository, private val raffleId: String) : ViewModelProvider.Factory {

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import com.example.lotteryapp.data.entity.Raffle
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.Ticket
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -42,13 +43,16 @@ object WhatsAppSender {
         val dateText = dateFormat.format(Date(raffle.drawDate))
         val buyerName = tickets.firstOrNull()?.buyerName ?: ""
         val statusText = if (tickets.firstOrNull()?.status?.name == "SOLD") "Vendido" else "Apartado"
-        
+        val perGroup = raffle.modality == RaffleModality.GROUPS
+        val total = if (perGroup) raffle.ticketPrice else raffle.ticketPrice * tickets.size
+
         return buildString {
             appendLine("🎟️ ${raffle.name}")
             appendLine("Premio: ${raffle.prizeName}")
             appendLine("Número(s): $numbers")
             appendLine("Fecha del sorteo: $dateText")
-            appendLine("Precio por boleto: ₡${raffle.ticketPrice.toInt()}")
+            appendLine(if (perGroup) "Precio por grupo: ₡${raffle.ticketPrice.toInt()}" else "Precio por boleto: ₡${raffle.ticketPrice.toInt()}")
+            appendLine("Total: ₡${total.toInt()}")
             appendLine("Comprador: $buyerName")
             append("Estado: $statusText")
         }

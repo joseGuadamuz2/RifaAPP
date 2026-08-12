@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -61,6 +62,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleSource
 import com.example.lotteryapp.util.ImageSharingHelper
 import java.text.SimpleDateFormat
@@ -206,7 +208,7 @@ fun EditRaffleScreen(
                 OutlinedTextField(
                     value = uiState.ticketPrice,
                     onValueChange = viewModel::onTicketPriceChange,
-                    label = { Text("Precio por boleto") },
+                    label = { Text(if (uiState.modality == RaffleModality.GROUPS) "Precio por grupo" else "Precio por boleto") },
                     prefix = { Text("₡ ", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -268,6 +270,35 @@ fun EditRaffleScreen(
                                 viewModel.onSourceChange(RaffleSource.CHANCES)
                                 sourceMenuExpanded = false
                             }
+                        )
+                    }
+                }
+
+                // Modalidad (solo lectura, no se puede cambiar tras crear)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Modalidad",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = if (uiState.modality == RaffleModality.GROUPS) {
+                                "Por grupos · ${uiState.groupSize} números por grupo (${100 / uiState.groupSize} grupos)"
+                            } else {
+                                "Sencilla · 100 boletos individuales"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "La modalidad no se puede modificar una vez creada la rifa.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
