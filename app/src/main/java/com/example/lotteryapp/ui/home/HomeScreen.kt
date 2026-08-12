@@ -21,10 +21,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -34,6 +40,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -57,13 +65,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.Raffle
+import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleStatus
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +86,7 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onCreateRaffle: () -> Unit,
     onOpenRaffle: (String) -> Unit,
+    onOpenSoldTickets: (String) -> Unit,
     onEditRaffle: (String) -> Unit
 ) {
     val raffleItems by viewModel.raffleItems.collectAsState()
@@ -79,6 +95,8 @@ fun HomeScreen(
 
     var isSearchActive by remember { mutableStateOf(false) }
     var raffleToDelete by remember { mutableStateOf<Raffle?>(null) }
+
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -164,6 +182,9 @@ fun HomeScreen(
                     RaffleCard(
                         item = item,
                         onClick = { onOpenRaffle(item.raffle.id) },
+                        onSell = { onOpenRaffle(item.raffle.id) },
+                        onOpenSoldTickets = { onOpenSoldTickets(item.raffle.id) },
+                        onShare = { viewModel.shareAvailableNumbers(context, item.raffle) },
                         onEdit = { onEditRaffle(item.raffle.id) },
                         onDelete = { raffleToDelete = item.raffle }
                     )
@@ -201,12 +222,17 @@ fun HomeScreen(
 private fun RaffleCard(
     item: RaffleItem,
     onClick: () -> Unit,
+    onSell: () -> Unit,
+    onOpenSoldTickets: () -> Unit,
+    onShare: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     val raffle = item.raffle
     var menuExpanded by remember { mutableStateOf(false) }
     val isClosed = raffle.status == RaffleStatus.CLOSED
+    val dateFormat = remember { SimpleDateFormat("dd MMM", Locale.forLanguageTag("es-ES")) }
+    val dateStr = dateFormat.format(Date(raffle.drawDate))
 
     Card(
         modifier = Modifier
@@ -294,6 +320,87 @@ private fun RaffleCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(CircleShape)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Detalle de la venta: precio, fecha y modalidad
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                HomeDetailItem(Icons.Filled.Payments, "₡${raffle.ticketPrice.toInt()}", "PRECIO", Modifier.weight(1f))
+                HomeDetailItem(Icons.Filled.Event, dateStr, "SORTEO", Modifier.weight(1f))
+                HomeDetailItem(
+                    if (raffle.modality == RaffleModality.GROUPS) Icons.Filled.Groups else Icons.Filled.ConfirmationNumber,
+                    if (raffle.modality == RaffleModality.GROUPS) "${raffle.groupSize} números" else "Sencilla",
+                    "MODALIDAD",
+                    Modifier.weight(1f)
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+
+            // Sección de venta y compartir
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onSell,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isClosed
+                ) {
+                    Icon(Icons.Filled.Payments, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("VENDER", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                FilledTonalButton(
+                    onClick = onOpenSoldTickets,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Filled.MonetizationOn, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("VENTAS", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                IconButton(
+                    onClick = onShare,
+                    modifier = Modifier.background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        RoundedCornerShape(12.dp)
+                    )
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeDetailItem(icon: ImageVector, value: String, label: String, modifier: Modifier = Modifier) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+        Icon(icon, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+        Spacer(Modifier.width(4.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = value,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF212121),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = label,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                letterSpacing = 0.5.sp,
+                maxLines = 1
             )
         }
     }

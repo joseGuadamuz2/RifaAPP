@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ListAlt
@@ -30,7 +29,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,6 +40,7 @@ import com.example.lotteryapp.data.entity.RaffleSource
 import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
+import com.example.lotteryapp.ui.components.PhoneFieldWithContacts
 import com.example.lotteryapp.util.ImageSharingHelper
 import com.example.lotteryapp.util.WhatsAppSender
 import kotlinx.coroutines.launch
@@ -155,7 +154,8 @@ fun TicketGridScreen(
                             isSelected = isSelected,
                             onClick = {
                                 if (gStatus == TicketStatus.AVAILABLE && isRaffleActive) {
-                                    selectedIds = if (isSelected) emptySet() else group.map { it.id }.toSet()
+                                    selectedIds = group.map { it.id }.toSet()
+                                    showGroupSellDialog = true
                                 } else {
                                     selectedGroupForDetails = group
                                 }
@@ -207,7 +207,10 @@ fun TicketGridScreen(
         val selectedTickets = tickets.filter { selectedIds.contains(it.id) }
         GroupSellDialog(
             tickets = selectedTickets,
-            onDismiss = { showGroupSellDialog = false },
+            onDismiss = {
+                showGroupSellDialog = false
+                selectedIds = emptySet()
+            },
             onConfirm = { name, phone, status ->
                 viewModel.sellOrReserveGroup(selectedTickets, name, phone, status)
                 selectedIds = emptySet()
@@ -434,15 +437,11 @@ private fun QuickSellDialog(
                 } else {
                     Text("Procesando como: ${if(selectedStatus == TicketStatus.SOLD) "VENTA" else "APARTADO"}", fontWeight = FontWeight.Bold, color = if(selectedStatus == TicketStatus.SOLD) ColorSold else Color(0xFF7B5E00))
                     OutlinedTextField(value = buyerName, onValueChange = { buyerName = it }, label = { Text("Nombre del cliente") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
-                    OutlinedTextField(
+                    PhoneFieldWithContacts(
                         value = buyerPhone,
-                        onValueChange = { if (it.length <= 8) buyerPhone = it.filter { c -> c.isDigit() } },
-                        label = { Text("WhatsApp (8 dígitos)") },
+                        onValueChange = { buyerPhone = it },
                         isError = !isPhoneValid,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -510,16 +509,21 @@ private fun GroupSellDialog(
                 } else {
                     Text("Modo: ${if(selectedStatus == TicketStatus.SOLD) "VENTA" else "APARTADO"}", fontWeight = FontWeight.Bold, color = if(selectedStatus == TicketStatus.SOLD) ColorSold else Color(0xFF7B5E00))
 
+                    Text(
+                        text = "Números: ${tickets.joinToString(", ") { it.number }}",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
                     OutlinedTextField(value = buyerName, onValueChange = { buyerName = it }, label = { Text("Nombre del cliente") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
-                    OutlinedTextField(
+                    PhoneFieldWithContacts(
                         value = buyerPhone,
-                        onValueChange = { if (it.length <= 8) buyerPhone = it.filter { c -> c.isDigit() } },
-                        label = { Text("WhatsApp (8 dígitos)") },
+                        onValueChange = { buyerPhone = it },
                         isError = !isPhoneValid,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }

@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.TicketStatus
+import com.example.lotteryapp.ui.components.PhoneFieldWithContacts
+import com.example.lotteryapp.util.PdfClientRow
+import com.example.lotteryapp.util.PdfReportHelper
 import com.example.lotteryapp.util.WhatsAppSender
 import java.text.NumberFormat
 import java.util.Locale
@@ -63,14 +66,46 @@ fun SoldTicketsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Administrador SaaS", fontWeight = FontWeight.ExtraBold) },
+                title = {
+                    Text(
+                        "Administrador",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 18.sp,
+                        maxLines = 1
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
+                    TextButton(
+                        onClick = {
+                            val pdfRows = buyers.sortedByDescending { it.totalPaid }.map { buyer ->
+                                PdfClientRow(
+                                    name = buyer.name,
+                                    numbers = buyer.allNumbers.joinToString(", "),
+                                    total = currencyFormat.format(buyer.totalPaid + buyer.totalPending)
+                                )
+                            }
+                            PdfReportHelper.generateAndSharePdf(
+                                context = context,
+                                raffleName = raffle?.name ?: "Rifa",
+                                totalRecaudado = currencyFormat.format(totalRecaudado),
+                                montoPendiente = currencyFormat.format(montoPendiente),
+                                boletosVendidos = boletosVendidos.toString(),
+                                boletosPendientes = boletosPendientes.toString(),
+                                clientes = pdfRows
+                            )
+                        },
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(2.dp))
+                        Text("PDF", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                    TextButton(onClick = {
                         val report = buildString {
                             appendLine("📊 *REPORTE DE VENTAS* 📊")
                             appendLine("*Rifa:* ${raffle?.name?.uppercase()}")
@@ -87,7 +122,7 @@ fun SoldTicketsScreen(
                                 appendLine("   Numbers: ${buyer.allNumbers.joinToString(", ")}")
                                 if (buyer.totalPending > 0) appendLine("   Debe: ${currencyFormat.format(buyer.totalPending)}")
                             }
-                            appendLine("\n_Generado por LotteryApp_ 🎟️")
+                            appendLine("\n_Generado por Rifador_ 🎟️")
                         }
                         val sendIntent = Intent().apply {
                             action = Intent.ACTION_SEND
@@ -95,8 +130,12 @@ fun SoldTicketsScreen(
                             type = "text/plain"
                         }
                         context.startActivity(Intent.createChooser(sendIntent, "Compartir Reporte"))
-                    }) {
-                        Icon(Icons.Default.Share, contentDescription = "Exportar")
+                    },
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(2.dp))
+                        Text("Generar Reporte", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             )
@@ -413,15 +452,19 @@ private fun EditPhoneDialog(currentPhone: String?, onDismiss: () -> Unit, onConf
         onDismissRequest = onDismiss,
         title = { Text("Actualizar Contacto") },
         text = {
-            OutlinedTextField(
-                value = phone, 
-                onValueChange = { if (it.length <= 8) phone = it.filter { c -> c.isDigit() } }, 
-                label = { Text("WhatsApp (8 dígitos)") }, 
-                placeholder = { Text("Ej: 88888888") }, 
-                modifier = Modifier.fillMaxWidth(), 
-                shape = RoundedCornerShape(12.dp),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone)
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Puedes escribirlo o elegirlo desde tus contactos.",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+                PhoneFieldWithContacts(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    placeholder = "Ej: 88888888",
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         },
         confirmButton = { Button(onClick = { onConfirm(phone.ifBlank { null }) }) { Text("Guardar") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }

@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 onCreateRaffle = { navController.navigate("createRaffle") },
                                 onOpenRaffle = { raffleId -> navController.navigate("ticketGrid/$raffleId") },
+                                onOpenSoldTickets = { raffleId -> navController.navigate("soldTickets/$raffleId") },
                                 onEditRaffle = { raffleId -> navController.navigate("editRaffle/$raffleId") }
                             )
                         }

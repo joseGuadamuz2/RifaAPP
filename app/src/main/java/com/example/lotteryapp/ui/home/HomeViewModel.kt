@@ -1,5 +1,6 @@
 package com.example.lotteryapp.ui.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,6 +9,7 @@ import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.repository.RaffleRepository
+import com.example.lotteryapp.util.ImageSharingHelper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -76,6 +78,13 @@ class HomeViewModel(
     fun deleteRaffle(raffle: Raffle) {
         viewModelScope.launch {
             repository.deleteRaffle(raffle)
+        }
+    }
+
+    fun shareAvailableNumbers(context: Context, raffle: Raffle) {
+        viewModelScope.launch {
+            val tickets = repository.getTicketsForRaffle(raffle.id).first()
+            ImageSharingHelper.shareAvailableNumbers(context, raffle, tickets)
         }
     }
 
