@@ -1,7 +1,6 @@
 package com.example.lotteryapp.ui.raffle
 
 import android.content.Intent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -121,7 +121,7 @@ fun SoldTicketsScreen(
                                 buyers.sortedByDescending { it.totalPaid }.forEach { buyer ->
                                     val statusIcon = if (buyer.totalPending > 0) "⏳" else "✅"
                                     appendLine("$statusIcon *${buyer.name}*")
-                                    appendLine("   Numbers: ${buyer.allNumbers.joinToString(", ")}")
+                                    appendLine("   Números: ${buyer.allNumbers.joinToString(", ")}")
                                     if (buyer.totalPending > 0) appendLine("   Debe: ${currencyFormat.format(buyer.totalPending)}")
                                 }
                                 appendLine("\n_Generado por Rifador_ 🎟️")
@@ -291,7 +291,7 @@ private fun DirectoryView(
     
     if (buyers.isEmpty()) {
         Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) { 
-            Text("Aún no tienes clientes registrados.", color = Color.Gray, textAlign = androidx.compose.ui.text.style.TextAlign.Center) 
+            Text("Aún no tienes clientes registrados.", color = Color.Gray, textAlign = TextAlign.Center) 
         }
     } else {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 100.dp, top = 8.dp)) {
@@ -401,11 +401,11 @@ private fun SaleEntryCardSaaS(
 
             Spacer(Modifier.height(12.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 if (hasPhone) {
                     Button(
                         onClick = if (!isSold) onSendReminder else onResend, 
-                        modifier = Modifier.weight(1f).height(36.dp), 
+                        modifier = Modifier.weight(1f).height(38.dp), 
                         colors = ButtonDefaults.buttonColors(containerColor = if (!isSold) Color(0xFF25D366) else MaterialTheme.colorScheme.primary), 
                         shape = RoundedCornerShape(10.dp), 
                         contentPadding = PaddingValues(horizontal = 8.dp)
@@ -414,29 +414,50 @@ private fun SaleEntryCardSaaS(
                         Spacer(Modifier.width(6.dp))
                         Text(if (!isSold) "Cobrar" else "Recibo", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
+                    Spacer(Modifier.width(8.dp))
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    IconButton(
-                        onClick = onToggleStatus, 
-                        modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    ) {
-                        Icon(if (isSold) Icons.Default.SyncAlt else Icons.Default.CheckCircle, null, tint = if (isSold) Color.Gray else Color(0xFF2E7D32), modifier = Modifier.size(18.dp))
-                    }
-                    IconButton(
-                        onClick = onEditPhone, 
-                        modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    ) {
-                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
-                    }
-                    IconButton(
-                        onClick = onCancel, 
-                        modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-                    ) {
-                        Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                    }
+                    SmallActionButton(
+                        icon = if (isSold) Icons.Default.SyncAlt else Icons.Default.CheckCircle,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        contentColor = if (isSold) Color.Gray else Color(0xFF2E7D32),
+                        onClick = onToggleStatus
+                    )
+                    SmallActionButton(
+                        icon = Icons.Default.Edit,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        onClick = onEditPhone
+                    )
+                    SmallActionButton(
+                        icon = Icons.Default.DeleteOutline,
+                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                        contentColor = MaterialTheme.colorScheme.error,
+                        onClick = onCancel
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SmallActionButton(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.size(36.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = containerColor,
+        contentColor = contentColor
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, null, modifier = Modifier.size(18.dp))
         }
     }
 }
