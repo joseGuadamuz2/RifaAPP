@@ -168,13 +168,14 @@ fun HomeScreen(
                 query = searchQuery,
                 tab = selectedTab,
                 onCreateClick = onCreateRaffle,
-                modifier = Modifier.padding(paddingValues)
+                modifier = Modifier.padding(paddingValues).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             )
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -238,58 +239,60 @@ private fun RaffleCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    StatusChip(status = raffle.status)
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = raffle.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = raffle.prizeName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Box {
-                    IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "Opciones")
-                    }
-                    DropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Editar") },
-                            onClick = { menuExpanded = false; onEdit() },
-                            leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Eliminar") },
-                            onClick = { menuExpanded = false; onDelete() },
-                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) }
-                        )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusChip(status = raffle.status)
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "Opciones", modifier = Modifier.size(20.dp))
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Editar") },
+                                onClick = { menuExpanded = false; onEdit() },
+                                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Eliminar") },
+                                onClick = { menuExpanded = false; onDelete() },
+                                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -298,15 +301,15 @@ private fun RaffleCard(
             ) {
                 Text(
                     text = if (isClosed) "Sorteo completado" else "Progreso de ventas",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "${item.soldCount}/${item.totalCount}",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 8.dp),
@@ -318,28 +321,28 @@ private fun RaffleCard(
                 progress = { item.progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(CircleShape)
+                    .height(6.dp)
+                    .clip(CircleShape),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Detalle de la venta: precio, fecha y modalidad
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                HomeDetailItem(Icons.Filled.Payments, "₡${raffle.ticketPrice.toInt()}", "PRECIO", Modifier.weight(1f))
-                HomeDetailItem(Icons.Filled.Event, dateStr, "SORTEO", Modifier.weight(1f))
+                HomeDetailItem(Icons.Filled.Payments, "₡${raffle.ticketPrice.toInt()}")
+                HomeDetailItem(Icons.Filled.Event, dateStr)
                 HomeDetailItem(
                     if (raffle.modality == RaffleModality.GROUPS) Icons.Filled.Groups else Icons.Filled.ConfirmationNumber,
-                    if (raffle.modality == RaffleModality.GROUPS) "${raffle.groupSize} números" else "Sencilla",
-                    "MODALIDAD",
-                    Modifier.weight(1f)
+                    if (raffle.modality == RaffleModality.GROUPS) "${raffle.groupSize} números" else "Sencilla"
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // Sección de venta y compartir
             Row(
@@ -349,31 +352,33 @@ private fun RaffleCard(
             ) {
                 Button(
                     onClick = onSell,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isClosed
+                    modifier = Modifier.weight(1f).height(38.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    enabled = !isClosed,
+                    contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
-                    Icon(Icons.Filled.Payments, null, Modifier.size(16.dp))
+                    Icon(Icons.Filled.Payments, null, Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("VENDER", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("VENDER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
                 FilledTonalButton(
                     onClick = onOpenSoldTickets,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.weight(1f).height(38.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
-                    Icon(Icons.Filled.MonetizationOn, null, Modifier.size(16.dp))
+                    Icon(Icons.Filled.MonetizationOn, null, Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("VENTAS", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("VENTAS", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
                 IconButton(
                     onClick = onShare,
-                    modifier = Modifier.background(
+                    modifier = Modifier.size(38.dp).background(
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        RoundedCornerShape(12.dp)
+                        RoundedCornerShape(10.dp)
                     )
                 ) {
-                    Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -381,41 +386,31 @@ private fun RaffleCard(
 }
 
 @Composable
-private fun HomeDetailItem(icon: ImageVector, value: String, label: String, modifier: Modifier = Modifier) {
+private fun HomeDetailItem(icon: ImageVector, value: String, modifier: Modifier = Modifier) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-        Icon(icon, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+        Icon(icon, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
         Spacer(Modifier.width(4.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = value,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF212121),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = label,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                letterSpacing = 0.5.sp,
-                maxLines = 1
-            )
-        }
+        Text(
+            text = value,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.DarkGray,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
 @Composable
 private fun StatusChip(status: RaffleStatus) {
     val isActive = status == RaffleStatus.ACTIVE
-    val containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-    val contentColor = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val containerColor = if (isActive) Color(0xFFE8F5E9) else Color(0xFFF5F5F5)
+    val contentColor = if (isActive) Color(0xFF2E7D32) else Color(0xFF757575)
 
-    Surface(color = containerColor, shape = RoundedCornerShape(8.dp)) {
+    Surface(color = containerColor, shape = RoundedCornerShape(4.dp)) {
         Text(
             text = if (isActive) "ACTIVA" else "CERRADA",
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = contentColor

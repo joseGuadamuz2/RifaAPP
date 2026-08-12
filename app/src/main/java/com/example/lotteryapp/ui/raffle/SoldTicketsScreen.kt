@@ -65,21 +65,22 @@ fun SoldTicketsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Administrador",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 18.sp,
-                        maxLines = 1
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
+                TopAppBar(
+                    title = { Text("Administrador", fontWeight = FontWeight.ExtraBold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        }
                     }
-                },
-                actions = {
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     TextButton(
                         onClick = {
                             val pdfRows = buyers.sortedByDescending { it.totalPaid }.map { buyer ->
@@ -99,57 +100,59 @@ fun SoldTicketsScreen(
                                 clientes = pdfRows
                             )
                         },
-                        contentPadding = PaddingValues(horizontal = 4.dp)
+                        modifier = Modifier.height(36.dp)
                     ) {
-                        Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(2.dp))
+                        Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text("PDF", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
-                    TextButton(onClick = {
-                        val report = buildString {
-                            appendLine("📊 *REPORTE DE VENTAS* 📊")
-                            appendLine("*Rifa:* ${raffle?.name?.uppercase()}")
-                            appendLine("━━━━━━━━━━━━━━━━")
-                            appendLine("💰 *RECAUDADO:* ${currencyFormat.format(totalRecaudado)}")
-                            appendLine("⏳ *POR COBRAR:* ${currencyFormat.format(montoPendiente)}")
-                            appendLine("🎟️ *PAGADOS:* $boletosVendidos")
-                            appendLine("🎟️ *PENDIENTES:* $boletosPendientes")
-                            appendLine("━━━━━━━━━━━━━━━━")
-                            appendLine("\n📝 *DETALLE DE CLIENTES:*")
-                            buyers.sortedByDescending { it.totalPaid }.forEach { buyer ->
-                                val statusIcon = if (buyer.totalPending > 0) "⏳" else "✅"
-                                appendLine("$statusIcon *${buyer.name}*")
-                                appendLine("   Numbers: ${buyer.allNumbers.joinToString(", ")}")
-                                if (buyer.totalPending > 0) appendLine("   Debe: ${currencyFormat.format(buyer.totalPending)}")
+                    TextButton(
+                        onClick = {
+                            val report = buildString {
+                                appendLine("📊 *REPORTE DE VENTAS* 📊")
+                                appendLine("*Rifa:* ${raffle?.name?.uppercase()}")
+                                appendLine("━━━━━━━━━━━━━━━━")
+                                appendLine("💰 *RECAUDADO:* ${currencyFormat.format(totalRecaudado)}")
+                                appendLine("⏳ *POR COBRAR:* ${currencyFormat.format(montoPendiente)}")
+                                appendLine("🎟️ *PAGADOS:* $boletosVendidos")
+                                appendLine("🎟️ *PENDIENTES:* $boletosPendientes")
+                                appendLine("━━━━━━━━━━━━━━━━")
+                                appendLine("\n📝 *DETALLE DE CLIENTES:*")
+                                buyers.sortedByDescending { it.totalPaid }.forEach { buyer ->
+                                    val statusIcon = if (buyer.totalPending > 0) "⏳" else "✅"
+                                    appendLine("$statusIcon *${buyer.name}*")
+                                    appendLine("   Numbers: ${buyer.allNumbers.joinToString(", ")}")
+                                    if (buyer.totalPending > 0) appendLine("   Debe: ${currencyFormat.format(buyer.totalPending)}")
+                                }
+                                appendLine("\n_Generado por Rifador_ 🎟️")
                             }
-                            appendLine("\n_Generado por Rifador_ 🎟️")
-                        }
-                        val sendIntent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, report)
-                            type = "text/plain"
-                        }
-                        context.startActivity(Intent.createChooser(sendIntent, "Compartir Reporte"))
-                    },
-                        contentPadding = PaddingValues(horizontal = 4.dp)
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, report)
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Compartir Reporte"))
+                        },
+                        modifier = Modifier.height(36.dp)
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(2.dp))
-                        Text("Generar Reporte", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Reporte", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
-            )
+            }
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
             
             // DASHBOARD SaaS MEJORADO
             Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -164,7 +167,7 @@ fun SoldTicketsScreen(
                 Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Directorio", fontWeight = FontWeight.Bold) })
             }
 
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp).weight(1f)) {
                 Spacer(Modifier.height(16.dp))
                 // BUSCADOR SaaS
                 OutlinedTextField(
@@ -295,32 +298,31 @@ private fun DirectoryView(
             items(buyers) { buyer ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape, modifier = Modifier.size(44.dp)) {
-                                Icon(Icons.Default.Person, null, modifier = Modifier.padding(10.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Surface(color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), shape = CircleShape, modifier = Modifier.size(40.dp)) {
+                                Icon(Icons.Default.Person, null, modifier = Modifier.padding(8.dp), tint = MaterialTheme.colorScheme.primary)
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(buyer.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                Text(buyer.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text("${buyer.tickets.size} boletos totales", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                             }
                         }
                         
                         Spacer(Modifier.height(12.dp))
-                        Text("Boletos: ${buyer.allNumbers.joinToString(", ")}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("Boletos: ${buyer.allNumbers.joinToString(", ")}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         
-                        HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                        HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Inversión Total", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                Text(currencyFormat.format(buyer.totalPaid + buyer.totalPending), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(currencyFormat.format(buyer.totalPaid + buyer.totalPending), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             if (buyer.totalPending > 0) {
                                 Button(
@@ -329,15 +331,18 @@ private fun DirectoryView(
                                         WhatsAppSender.sendCustomMessage(context, buyer.phone, msg)
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.height(40.dp)
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.height(36.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp)
                                 ) {
-                                    Icon(Icons.Default.NotificationsActive, null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(8.dp))
+                                    Icon(Icons.Default.NotificationsActive, null, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(6.dp))
                                     Text("Cobrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                             } else {
-                                AssistChip(onClick = {}, label = { Text("AL DÍA", fontWeight = FontWeight.Bold) }, leadingIcon = { Icon(Icons.Default.Verified, null, Modifier.size(18.dp), Color(0xFF2E7D32)) })
+                                Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
+                                    Text("AL DÍA", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                                }
                             }
                         }
                     }
@@ -370,24 +375,23 @@ private fun SaleEntryCardSaaS(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = entry.buyerName ?: "Sin Nombre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(text = "Boletos: ${entry.numbers.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(text = entry.buyerName ?: "Sin Nombre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(text = "Boletos: ${entry.numbers.joinToString(", ")}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Surface(
                     color = if (isSold) Color(0xFFE8F5E9) else Color(0xFFFFF3E0), 
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
                         text = if (isSold) "PAGADO" else "PENDIENTE", 
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), 
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), 
                         style = MaterialTheme.typography.labelSmall, 
                         color = if (isSold) Color(0xFF2E7D32) else Color(0xFFE65100), 
                         fontWeight = FontWeight.ExtraBold
@@ -395,50 +399,42 @@ private fun SaleEntryCardSaaS(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!isSold && hasPhone) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (hasPhone) {
                     Button(
-                        onClick = onSendReminder, 
-                        modifier = Modifier.weight(1.5f), 
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)), 
-                        shape = RoundedCornerShape(12.dp), 
-                        contentPadding = PaddingValues(0.dp)
+                        onClick = if (!isSold) onSendReminder else onResend, 
+                        modifier = Modifier.weight(1f).height(36.dp), 
+                        colors = ButtonDefaults.buttonColors(containerColor = if (!isSold) Color(0xFF25D366) else MaterialTheme.colorScheme.primary), 
+                        shape = RoundedCornerShape(10.dp), 
+                        contentPadding = PaddingValues(horizontal = 8.dp)
                     ) {
-                        Icon(Icons.Default.NotificationsActive, null, Modifier.size(16.dp))
+                        Icon(if (!isSold) Icons.Default.NotificationsActive else Icons.Default.Share, null, Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Cobrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                } else if (isSold && hasPhone) {
-                    FilledTonalButton(
-                        onClick = onResend, 
-                        modifier = Modifier.weight(1.5f), 
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.Share, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Recibo", fontSize = 11.sp)
+                        Text(if (!isSold) "Cobrar" else "Recibo", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
-                IconButton(
-                    onClick = onToggleStatus, 
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(if (isSold) Icons.Default.SyncAlt else Icons.Default.CheckCircle, null, tint = if (isSold) Color.Gray else Color(0xFF2E7D32))
-                }
-                IconButton(
-                    onClick = onEditPhone, 
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
-                }
-                IconButton(
-                    onClick = onCancel, 
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    IconButton(
+                        onClick = onToggleStatus, 
+                        modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(if (isSold) Icons.Default.SyncAlt else Icons.Default.CheckCircle, null, tint = if (isSold) Color.Gray else Color(0xFF2E7D32), modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(
+                        onClick = onEditPhone, 
+                        modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
+                    }
+                    IconButton(
+                        onClick = onCancel, 
+                        modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }

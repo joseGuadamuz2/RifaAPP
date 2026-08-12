@@ -41,17 +41,17 @@ import com.example.lotteryapp.data.entity.RaffleStatus
 import com.example.lotteryapp.data.entity.Ticket
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.ui.components.PhoneFieldWithContacts
+import com.example.lotteryapp.ui.theme.TicketAvailable
+import com.example.lotteryapp.ui.theme.TicketReservedBg
+import com.example.lotteryapp.ui.theme.TicketSelected
+import com.example.lotteryapp.ui.theme.TicketSoldBg
+import com.example.lotteryapp.ui.theme.TicketSelectedBorder
 import com.example.lotteryapp.util.ImageSharingHelper
 import com.example.lotteryapp.util.WhatsAppSender
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-private val ColorAvailable = Color(0xFFF5F5F5)
-private val ColorReserved = Color(0xFFFFD54F)
-private val ColorSold = Color(0xFF66BB6A)
-private val ColorSelectedBorder = Color(0xFF1976D2)
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -320,13 +320,13 @@ private fun BottomActionPanel(
                 SummaryStatSmall(
                     label = "VENDIDO",
                     value = sold.toString(),
-                    color = ColorSold,
+                    color = TicketSoldBg,
                     modifier = Modifier.weight(1f)
                 )
                 SummaryStatSmall(
                     label = "RESERVA",
                     value = reserved.toString(),
-                    color = ColorReserved,
+                    color = TicketReservedBg,
                     modifier = Modifier.weight(1f)
                 )
                 SummaryStatSmall(
@@ -343,7 +343,7 @@ private fun BottomActionPanel(
                     enabled = !isGroupMode || selectedCount > 0,
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedCount == 0) MaterialTheme.colorScheme.primary else ColorSelectedBorder
+                        containerColor = if (selectedCount == 0) MaterialTheme.colorScheme.primary else TicketSelectedBorder
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
@@ -415,7 +415,7 @@ private fun QuickSellDialog(
                         onClick = { selectedStatus = TicketStatus.SOLD },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ColorSold),
+                        colors = ButtonDefaults.buttonColors(containerColor = TicketSoldBg),
                         enabled = availableTickets.isNotEmpty()
                     ) {
                         Icon(Icons.Default.CheckCircle, null)
@@ -427,7 +427,7 @@ private fun QuickSellDialog(
                         onClick = { selectedStatus = TicketStatus.RESERVED },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = ColorReserved.copy(alpha = 0.2f), contentColor = Color(0xFF7B5E00)),
+                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = TicketReservedBg.copy(alpha = 0.2f), contentColor = Color(0xFF7B5E00)),
                         enabled = availableTickets.isNotEmpty()
                     ) {
                         Icon(Icons.Default.Schedule, null)
@@ -435,7 +435,7 @@ private fun QuickSellDialog(
                         Text("APARTAR (Reserva)")
                     }
                 } else {
-                    Text("Procesando como: ${if(selectedStatus == TicketStatus.SOLD) "VENTA" else "APARTADO"}", fontWeight = FontWeight.Bold, color = if(selectedStatus == TicketStatus.SOLD) ColorSold else Color(0xFF7B5E00))
+                    Text("Procesando como: ${if(selectedStatus == TicketStatus.SOLD) "VENTA" else "APARTADO"}", fontWeight = FontWeight.Bold, color = if(selectedStatus == TicketStatus.SOLD) TicketSoldBg else Color(0xFF7B5E00))
                     OutlinedTextField(value = buyerName, onValueChange = { buyerName = it }, label = { Text("Nombre del cliente") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
                     PhoneFieldWithContacts(
                         value = buyerPhone,
@@ -489,7 +489,7 @@ private fun GroupSellDialog(
                         onClick = { selectedStatus = TicketStatus.SOLD },
                         modifier = Modifier.fillMaxWidth().height(60.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ColorSold)
+                        colors = ButtonDefaults.buttonColors(containerColor = TicketSoldBg)
                     ) {
                         Icon(Icons.Default.CheckCircle, null)
                         Spacer(Modifier.width(12.dp))
@@ -500,14 +500,14 @@ private fun GroupSellDialog(
                         onClick = { selectedStatus = TicketStatus.RESERVED },
                         modifier = Modifier.fillMaxWidth().height(60.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = ColorReserved.copy(alpha = 0.2f), contentColor = Color(0xFF7B5E00))
+                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = TicketReservedBg.copy(alpha = 0.2f), contentColor = Color(0xFF7B5E00))
                     ) {
                         Icon(Icons.Default.Schedule, null)
                         Spacer(Modifier.width(12.dp))
                         Text("APARTAR (Reserva)", fontWeight = FontWeight.Bold)
                     }
                 } else {
-                    Text("Modo: ${if(selectedStatus == TicketStatus.SOLD) "VENTA" else "APARTADO"}", fontWeight = FontWeight.Bold, color = if(selectedStatus == TicketStatus.SOLD) ColorSold else Color(0xFF7B5E00))
+                    Text("Procesando como: ${if(selectedStatus == TicketStatus.SOLD) "VENTA" else "APARTADO"}", fontWeight = FontWeight.Bold, color = if(selectedStatus == TicketStatus.SOLD) TicketSoldBg else Color(0xFF7B5E00))
 
                     Text(
                         text = "Números: ${tickets.joinToString(", ") { it.number }}",
@@ -580,8 +580,8 @@ private fun RaffleHeaderSaaS(raffle: Raffle, onEditClick: () -> Unit, onOpenSold
                     Text(raffle.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(raffle.prizeName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Surface(color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold.copy(alpha = 0.1f) else Color.LightGray.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
-                    Text(if(raffle.status == RaffleStatus.ACTIVE) "ACTIVA" else "CERRADA", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = if(raffle.status == RaffleStatus.ACTIVE) ColorSold else Color.Gray, fontWeight = FontWeight.Bold)
+                Surface(color = if(raffle.status == RaffleStatus.ACTIVE) Color(0xFFE8F5E9) else Color(0xFFF5F5F5), shape = RoundedCornerShape(4.dp)) {
+                    Text(if(raffle.status == RaffleStatus.ACTIVE) "ACTIVA" else "CERRADA", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = if(raffle.status == RaffleStatus.ACTIVE) Color(0xFF2E7D32) else Color(0xFF757575), fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -627,9 +627,9 @@ private fun TicketActionSheetContent(ticket: Ticket, canModify: Boolean, onToggl
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(8.dp))
             if (ticket.status == TicketStatus.RESERVED) {
-                ListItem(headlineContent = { Text("Confirmar Pago (Marcar como Vendido)", fontWeight = FontWeight.Bold, color = ColorSold) }, leadingContent = { Icon(Icons.Default.CheckCircle, null, tint = ColorSold) }, modifier = Modifier.clickable { onToggleStatus(ticket) })
+                ListItem(headlineContent = { Text("Confirmar Pago (Marcar como Vendido)", fontWeight = FontWeight.Bold, color = TicketSoldBg) }, leadingContent = { Icon(Icons.Default.CheckCircle, null, tint = TicketSoldBg) }, modifier = Modifier.clickable { onToggleStatus(ticket) })
             } else {
-                ListItem(headlineContent = { Text("Cambiar a Apartado", fontWeight = FontWeight.Bold, color = ColorReserved) }, leadingContent = { Icon(Icons.Default.Schedule, null, tint = ColorReserved) }, modifier = Modifier.clickable { onToggleStatus(ticket) })
+                ListItem(headlineContent = { Text("Cambiar a Apartado", fontWeight = FontWeight.Bold, color = TicketReservedBg) }, leadingContent = { Icon(Icons.Default.Schedule, null, tint = TicketReservedBg) }, modifier = Modifier.clickable { onToggleStatus(ticket) })
             }
             ListItem(headlineContent = { Text("Liberar número (Borrar venta)", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }, leadingContent = { Icon(Icons.Default.DeleteSweep, null, tint = MaterialTheme.colorScheme.error) }, modifier = Modifier.clickable { onFree() })
         }
@@ -639,9 +639,9 @@ private fun TicketActionSheetContent(ticket: Ticket, canModify: Boolean, onToggl
 @Composable
 private fun LegendRow() {
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)) {
-        LegendItem(color = ColorAvailable, label = "Libre")
-        LegendItem(color = ColorReserved, label = "Apartado")
-        LegendItem(color = ColorSold, label = "Vendido")
+        LegendItem(color = TicketAvailable, label = "Libre")
+        LegendItem(color = TicketReservedBg, label = "Apartado")
+        LegendItem(color = TicketSoldBg, label = "Vendido")
     }
 }
 
@@ -665,12 +665,12 @@ private fun SummaryStatSmall(label: String, value: String, color: Color, modifie
 @Composable
 private fun TicketCell(ticket: Ticket, isSelected: Boolean, onClick: () -> Unit) {
     val backgroundColor = when (ticket.status) {
-        TicketStatus.AVAILABLE -> if (isSelected) ColorSelectedBorder.copy(alpha = 0.1f) else Color.White
-        TicketStatus.RESERVED -> ColorReserved
-        TicketStatus.SOLD -> ColorSold
+        TicketStatus.AVAILABLE -> if (isSelected) TicketSelectedBorder.copy(alpha = 0.1f) else Color.White
+        TicketStatus.RESERVED -> TicketReservedBg
+        TicketStatus.SOLD -> TicketSoldBg
     }
     val textColor = when (ticket.status) {
-        TicketStatus.AVAILABLE -> if (isSelected) ColorSelectedBorder else Color(0xFF424242)
+        TicketStatus.AVAILABLE -> if (isSelected) TicketSelectedBorder else Color(0xFF424242)
         else -> Color.White
     }
     
@@ -682,7 +682,7 @@ private fun TicketCell(ticket: Ticket, isSelected: Boolean, onClick: () -> Unit)
             .background(backgroundColor)
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
-                color = if (isSelected) ColorSelectedBorder else Color.Gray.copy(alpha = 0.1f),
+                color = if (isSelected) TicketSelectedBorder else Color.Gray.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(8.dp)
             )
             .clickable(onClick = onClick),
@@ -709,12 +709,12 @@ private fun GroupCell(
     onClick: () -> Unit
 ) {
     val backgroundColor = when (status) {
-        TicketStatus.AVAILABLE -> if (isSelected) ColorSelectedBorder.copy(alpha = 0.1f) else Color.White
-        TicketStatus.RESERVED -> ColorReserved
-        TicketStatus.SOLD -> ColorSold
+        TicketStatus.AVAILABLE -> if (isSelected) TicketSelectedBorder.copy(alpha = 0.1f) else Color.White
+        TicketStatus.RESERVED -> TicketReservedBg
+        TicketStatus.SOLD -> TicketSoldBg
     }
     val textColor = when (status) {
-        TicketStatus.AVAILABLE -> if (isSelected) ColorSelectedBorder else Color(0xFF424242)
+        TicketStatus.AVAILABLE -> if (isSelected) TicketSelectedBorder else Color(0xFF424242)
         else -> Color.White
     }
     val showRange = group.size > 10
@@ -728,7 +728,7 @@ private fun GroupCell(
             .background(backgroundColor)
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
-                color = if (isSelected) ColorSelectedBorder else Color.Gray.copy(alpha = 0.1f),
+                color = if (isSelected) TicketSelectedBorder else Color.Gray.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(8.dp)
             )
             .clickable(onClick = onClick),
@@ -816,9 +816,9 @@ private fun GroupActionSheetContent(
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(8.dp))
             if (first.status == TicketStatus.RESERVED) {
-                ListItem(headlineContent = { Text("Confirmar Pago (Marcar como Vendido)", fontWeight = FontWeight.Bold, color = ColorSold) }, leadingContent = { Icon(Icons.Default.CheckCircle, null, tint = ColorSold) }, modifier = Modifier.clickable { onToggleStatus() })
+                ListItem(headlineContent = { Text("Confirmar Pago (Marcar como Vendido)", fontWeight = FontWeight.Bold, color = TicketSoldBg) }, leadingContent = { Icon(Icons.Default.CheckCircle, null, tint = TicketSoldBg) }, modifier = Modifier.clickable { onToggleStatus() })
             } else {
-                ListItem(headlineContent = { Text("Cambiar a Apartado", fontWeight = FontWeight.Bold, color = ColorReserved) }, leadingContent = { Icon(Icons.Default.Schedule, null, tint = ColorReserved) }, modifier = Modifier.clickable { onToggleStatus() })
+                ListItem(headlineContent = { Text("Cambiar a Apartado", fontWeight = FontWeight.Bold, color = TicketReservedBg) }, leadingContent = { Icon(Icons.Default.Schedule, null, tint = TicketReservedBg) }, modifier = Modifier.clickable { onToggleStatus() })
             }
             ListItem(headlineContent = { Text("Liberar grupo (Borrar venta)", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }, leadingContent = { Icon(Icons.Default.DeleteSweep, null, tint = MaterialTheme.colorScheme.error) }, modifier = Modifier.clickable { onFree() })
         }
