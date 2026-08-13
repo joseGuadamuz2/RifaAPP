@@ -23,7 +23,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -34,8 +33,10 @@ import com.example.lotteryapp.data.entity.Raffle
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.data.entity.Winner
 import com.example.lotteryapp.ui.components.PhoneFieldWithContacts
+import com.example.lotteryapp.ui.components.StatusChip
 import com.example.lotteryapp.ui.raffle.SaleEntry
 import com.example.lotteryapp.ui.theme.WhatsAppGreen
+import com.example.lotteryapp.ui.theme.ticketPalette
 import com.example.lotteryapp.util.WhatsAppSender
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -288,16 +289,15 @@ private fun WinnerCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
-                        color = Color(0xFFFFF8E1),
+                        color = ticketPalette().reservedBg,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = winner.winningNumber,
-                                color = Color(0xFFB26A00),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 16.sp
+                                color = ticketPalette().reservedText,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold)
                             )
                         }
                     }
@@ -318,18 +318,10 @@ private fun WinnerCard(
                         )
                     }
                 }
-                Surface(
-                    color = if (winner.notified) Color(0xFFE8F5E9) else Color(0xFFF5F5F5),
-                    shape = RoundedCornerShape(4.dp)
-                ) {
-                    Text(
-                        text = if (winner.notified) "NOTIFICADO" else "PENDIENTE",
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (winner.notified) Color(0xFF2E7D32) else Color(0xFF757575),
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
+                StatusChip(
+                    label = if (winner.notified) "NOTIFICADO" else "PENDIENTE",
+                    active = winner.notified
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -365,7 +357,7 @@ private fun WinnerCard(
                         ) {
                             Icon(Icons.Filled.NotificationsActive, null, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("WhatsApp", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("WhatsApp", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                         }
                     }
                     Surface(
@@ -456,7 +448,7 @@ private fun RegisterWinnerDialog(
                 Text(
                     text = "Buscá el boleto vendido por número o nombre del participante.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = searchQuery,
@@ -526,7 +518,7 @@ private fun RegisterWinnerDialog(
                                             text = if (entry.status == TicketStatus.SOLD) "PAGADO" else "APARTADO",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (entry.status == TicketStatus.SOLD) Color(0xFF2E7D32) else Color(0xFFE65100)
+                                            color = if (entry.status == TicketStatus.SOLD) MaterialTheme.colorScheme.tertiary else ticketPalette().reservedText
                                         )
                                     }
                                 }

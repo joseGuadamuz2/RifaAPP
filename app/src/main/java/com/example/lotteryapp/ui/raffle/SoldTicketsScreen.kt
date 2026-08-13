@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.TicketStatus
 import com.example.lotteryapp.ui.components.PhoneFieldWithContacts
+import com.example.lotteryapp.ui.components.StatusChip
 import com.example.lotteryapp.util.PdfClientRow
 import com.example.lotteryapp.util.PdfReportHelper
 import com.example.lotteryapp.util.WhatsAppSender
@@ -116,7 +117,7 @@ fun SoldTicketsScreen(
                     ) {
                         Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("PDF", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("PDF", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                     }
                     TextButton(
                         onClick = {
@@ -149,7 +150,7 @@ fun SoldTicketsScreen(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Reporte", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Reporte", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                     }
                 }
             }
@@ -168,7 +169,7 @@ fun SoldTicketsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SummaryStat(label = "Recaudado", value = currencyFormat.format(totalRecaudado), icon = Icons.Default.MonetizationOn, color = Color(0xFF2E7D32), modifier = Modifier.weight(1f))
+                    SummaryStat(label = "Recaudado", value = currencyFormat.format(totalRecaudado), icon = Icons.Default.MonetizationOn, color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f))
                     SummaryStat(label = "Por Cobrar", value = currencyFormat.format(montoPendiente), icon = Icons.Default.HourglassBottom, color = Color(0xFFD32F2F), modifier = Modifier.weight(1f))
                     SummaryStat(label = "Venta", value = "$boletosVendidos/100", icon = Icons.Default.ConfirmationNumber, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
                 }
@@ -309,7 +310,7 @@ private fun DirectoryView(
     
     if (buyers.isEmpty()) {
         Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) { 
-            Text("Aún no tienes clientes registrados.", color = Color.Gray, textAlign = TextAlign.Center) 
+            Text("Aún no tienes clientes registrados.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) 
         }
     } else {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(bottom = 100.dp, top = 8.dp)) {
@@ -328,19 +329,19 @@ private fun DirectoryView(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(buyer.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("${buyer.tickets.size} boletos totales", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text("${buyer.tickets.size} boletos totales", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         
                         Spacer(Modifier.height(12.dp))
-                        Text("Boletos: ${buyer.allNumbers.joinToString(", ")}", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("Boletos: ${buyer.allNumbers.joinToString(", ")}", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.ExtraBold), color = MaterialTheme.colorScheme.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         
                         HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Inversión Total", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                Text(currencyFormat.format(buyer.totalPaid + buyer.totalPending), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("Inversión Total", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(currencyFormat.format(buyer.totalPaid + buyer.totalPending), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             if (buyer.totalPending > 0) {
                                 Button(
@@ -357,12 +358,10 @@ private fun DirectoryView(
                                 ) {
                                     Icon(Icons.Default.NotificationsActive, null, modifier = Modifier.size(14.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Cobrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("Cobrar", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                                 }
                             } else {
-                                Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
-                                    Text("AL DÍA", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
-                                }
+                                StatusChip(label = "AL DÍA", active = true)
                             }
                         }
                     }
@@ -376,8 +375,8 @@ private fun DirectoryView(
 private fun SummaryStat(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, modifier: Modifier = Modifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(icon, null, modifier = Modifier.size(22.dp), tint = color)
-        Text(text = value, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray, maxLines = 1)
+        Text(text = value, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
 }
 
@@ -405,18 +404,10 @@ private fun SaleEntryCardSaaS(
                     Text(text = entry.buyerName ?: "Sin Nombre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(text = "Boletos: ${entry.numbers.joinToString(", ")}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Surface(
-                    color = if (isSold) Color(0xFFE8F5E9) else Color(0xFFFFF3E0), 
-                    shape = RoundedCornerShape(4.dp)
-                ) {
-                    Text(
-                        text = if (isSold) "PAGADO" else "PENDIENTE", 
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), 
-                        style = MaterialTheme.typography.labelSmall, 
-                        color = if (isSold) Color(0xFF2E7D32) else Color(0xFFE65100), 
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
+                StatusChip(
+                    label = if (isSold) "PAGADO" else "PENDIENTE",
+                    active = isSold
+                )
             }
 
             Spacer(Modifier.height(12.dp))
@@ -432,7 +423,7 @@ private fun SaleEntryCardSaaS(
                     ) {
                         Icon(if (!isSold) Icons.Default.NotificationsActive else Icons.Default.Share, null, Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(if (!isSold) "Cobrar" else "Recibo", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(if (!isSold) "Cobrar" else "Recibo", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                     }
                     Spacer(Modifier.width(8.dp))
                 }
@@ -441,7 +432,7 @@ private fun SaleEntryCardSaaS(
                     SmallActionButton(
                         icon = if (isSold) Icons.Default.SyncAlt else Icons.Default.CheckCircle,
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        contentColor = if (isSold) Color.Gray else Color(0xFF2E7D32),
+                        contentColor = if (isSold) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.tertiary,
                         onClick = onToggleStatus
                     )
                     SmallActionButton(
@@ -493,7 +484,7 @@ private fun EditPhoneDialog(currentPhone: String?, onDismiss: () -> Unit, onConf
                 Text(
                     text = "Puedes escribirlo o elegirlo desde tus contactos.",
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 PhoneFieldWithContacts(
                     value = phone,

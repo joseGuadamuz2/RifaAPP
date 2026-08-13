@@ -85,7 +85,7 @@ fun PhoneFieldWithContacts(
                 Icon(
                     Icons.Filled.Contacts,
                     contentDescription = "Elegir de contactos",
-                    tint = if (pickingContact) androidx.compose.ui.graphics.Color.Gray else androidx.compose.material3.MaterialTheme.colorScheme.primary
+                    tint = if (pickingContact) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else androidx.compose.material3.MaterialTheme.colorScheme.primary
                 )
             }
         },

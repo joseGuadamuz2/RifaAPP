@@ -1,7 +1,6 @@
 package com.example.lotteryapp.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,8 +34,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,7 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -77,6 +73,8 @@ import androidx.compose.ui.unit.sp
 import com.example.lotteryapp.data.entity.Raffle
 import com.example.lotteryapp.data.entity.RaffleModality
 import com.example.lotteryapp.data.entity.RaffleStatus
+import com.example.lotteryapp.ui.components.PressableCard
+import com.example.lotteryapp.ui.components.StatusChip
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -239,13 +237,12 @@ private fun RaffleCard(
     val dateFormat = remember { SimpleDateFormat("dd MMM", Locale.forLanguageTag("es-ES")) }
     val dateStr = dateFormat.format(Date(raffle.drawDate))
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+    PressableCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        containerColor = MaterialTheme.colorScheme.surface,
+        elevation = 1.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -272,7 +269,10 @@ private fun RaffleCard(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusChip(status = raffle.status)
+                    StatusChip(
+                        label = if (isClosed) "CERRADA" else "ACTIVA",
+                        active = !isClosed
+                    )
                     Box {
                         IconButton(onClick = { menuExpanded = true }) {
                             Icon(Icons.Filled.MoreVert, contentDescription = "Opciones", modifier = Modifier.size(20.dp))
@@ -363,7 +363,7 @@ private fun RaffleCard(
                     ) {
                         Icon(Icons.Filled.EmojiEvents, null, Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("GANADORES", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        Text("GANADORES", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                     }
                 } else {
                     Button(
@@ -375,7 +375,7 @@ private fun RaffleCard(
                     ) {
                         Icon(Icons.Filled.Payments, null, Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("VENDER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        Text("VENDER", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                     }
                 }
                 FilledTonalButton(
@@ -386,7 +386,7 @@ private fun RaffleCard(
                 ) {
                     Icon(Icons.Filled.MonetizationOn, null, Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("VENTAS", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Text("VENTAS", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                 }
                 IconButton(
                     onClick = onShare,
@@ -409,28 +409,11 @@ private fun HomeDetailItem(icon: ImageVector, value: String, modifier: Modifier 
         Spacer(Modifier.width(4.dp))
         Text(
             text = value,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
-            color = Color.DarkGray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun StatusChip(status: RaffleStatus) {
-    val isActive = status == RaffleStatus.ACTIVE
-    val containerColor = if (isActive) Color(0xFFE8F5E9) else Color(0xFFF5F5F5)
-    val contentColor = if (isActive) Color(0xFF2E7D32) else Color(0xFF757575)
-
-    Surface(color = containerColor, shape = RoundedCornerShape(4.dp)) {
-        Text(
-            text = if (isActive) "ACTIVA" else "CERRADA",
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = contentColor
         )
     }
 }
